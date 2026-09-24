@@ -113,8 +113,6 @@ final class HotkeyMonitor {
     private func handleFlags(_ flags: CGEventFlags) {
         let held = flags.intersection(Self.trackedFlags)
         let chordHeld = held == Self.chordFlags
-        DebugTrace.write("hotkey: flags=0x\(String(flags.rawValue, radix: 16)) chord=\(chordHeld) phase=\(phase)")
-        logger.notice("flagsChanged raw=0x\(String(flags.rawValue, radix: 16), privacy: .public) chord=\(chordHeld, privacy: .public) phase=\(String(describing: self.phase), privacy: .public)")
 
         switch phase {
         case .idle:

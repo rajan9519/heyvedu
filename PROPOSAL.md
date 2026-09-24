@@ -15,7 +15,7 @@ pasted at the cursor.
 | Project | Xcode project, SwiftUI `MenuBarExtra` app, no Dock icon |
 | Hotkey | Hold Control+Option (push-to-talk); mic starts on press, stops on release |
 | Mic | Only active while the hotkey is held; handles device plug/unplug/switch |
-| ASR | FluidAudio + `nvidia/parakeet-tdt-0.6b-v3` (Core ML, Neural Engine) |
+| ASR | FluidAudio 0.17.1 (exact pin) + `nvidia/parakeet-tdt-0.6b-v3` (Core ML, Neural Engine), Latin-script filter for English |
 | Cleanup | Apple Foundation Models on **every** transcript: self-corrections, fillers, grammar, punctuation |
 | Vocabulary | Model prompt only (no deterministic replacement list) |
 | Insertion | Temporarily take over clipboard + synthetic ⌘V, then restore |
@@ -83,3 +83,7 @@ pasted at the cursor.
 - Clipboard restore copies concrete data only; lazily-provided/promised clipboard
   contents from other apps may not survive.
 - ⌘V is posted by key code (ANSI "V"); non-QWERTY layouts may need adjustment.
+- Model files come from `huggingface.co/FluidInference/parakeet-tdt-0.6b-v3-coreml`
+  (`main` branch, over TLS, no checksum pinning in FluidAudio). The registry URL is
+  pinned in code so `REGISTRY_URL`/`MODEL_REGISTRY_URL` env overrides are ignored.
+- FluidAudio 0.12.x does not compile under Swift 6.3 (strict concurrency); 0.17.x does.

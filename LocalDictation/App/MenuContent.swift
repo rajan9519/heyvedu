@@ -12,6 +12,9 @@ struct MenuContent: View {
         if !controller.permissions.accessibilityGranted {
             Button("Grant Accessibility Access…") { controller.permissions.requestAccessibility() }
         }
+        if case .failed = controller.speechModel.state {
+            Button("Retry Loading Speech Model") { controller.speechModel.prepare() }
+        }
 
         Divider()
 

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1D0000000000000000000014 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = 1D0000000000000000000013 /* FluidAudio */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		1D0000000000000000000004 /* LocalDictation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LocalDictation.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D0000000000000000000011 /* LocalDictation.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LocalDictation.entitlements; sourceTree = "<group>"; };
@@ -24,6 +28,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1D0000000000000000000014 /* FluidAudio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +80,7 @@
 			);
 			name = LocalDictation;
 			packageProductDependencies = (
+				1D0000000000000000000013 /* FluidAudio */,
 			);
 			productName = LocalDictation;
 			productReference = 1D0000000000000000000004 /* LocalDictation.app */;
@@ -104,6 +110,9 @@
 			);
 			mainGroup = 1D0000000000000000000002;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1D0000000000000000000012 /* XCRemoteSwiftPackageReference "FluidAudio" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1D0000000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -260,6 +269,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1D0000000000000000000012 /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.17.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1D0000000000000000000013 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1D0000000000000000000012 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1D0000000000000000000001 /* Project object */;
 }

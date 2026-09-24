@@ -14,6 +14,7 @@ final class DictationController {
 
     let permissions = PermissionsManager()
     let devices = AudioDeviceManager()
+    let speechModel = SpeechModel()
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
@@ -22,7 +23,6 @@ final class DictationController {
     @ObservationIgnored private let recorder = AudioRecorder()
     @ObservationIgnored private let hud = RecordingHUD()
     @ObservationIgnored private let inserter = TextInserter()
-    @ObservationIgnored private let transcriber: Transcriber = StubTranscriber()
     /// Why the current press could not start recording, shown once the press commits.
     @ObservationIgnored private var pressFailure: String?
     /// Set when the chosen mic was missing and the system default is used instead.
@@ -43,6 +43,11 @@ final class DictationController {
         case .processing: return "waveform"
         case .idle:
             if !permissions.allGranted || !hotkeyAvailable { return "exclamationmark.triangle" }
+            switch speechModel.state {
+            case .idle, .downloading, .loading: return "arrow.down.circle"
+            case .failed: return "exclamationmark.triangle"
+            case .ready: break
+            }
             if devices.defaultInputDevice == nil && devices.inputDevices.isEmpty { return "mic.slash" }
             return "mic"
         }
@@ -55,6 +60,12 @@ final class DictationController {
         case .idle:
             if !permissions.allGranted { return "Permissions needed" }
             if !hotkeyAvailable { return "Hotkey unavailable — re-grant Accessibility" }
+            switch speechModel.state {
+            case .idle, .loading: return "Loading speech model…"
+            case .downloading: return "Downloading speech model (~600 MB)…"
+            case .failed: return "Speech model failed to load"
+            case .ready: break
+            }
             if devices.inputDevices.isEmpty { return "No microphone connected" }
             return "Hold ⌃⌥ to dictate"
         }
@@ -76,6 +87,8 @@ final class DictationController {
             self?.logger.notice("Input device changed mid-recording; finishing with captured audio")
             self?.finishRecording()
         }
+
+        speechModel.prepare()
 
         permissions.onChange = { [weak self] in self?.permissionsChanged() }
         permissions.startMonitoring()
@@ -128,6 +141,15 @@ final class DictationController {
 
         guard permissions.microphoneGranted else {
             pressFailure = "Microphone access needed"
+            return
+        }
+        switch speechModel.state {
+        case .ready: break
+        case .failed:
+            pressFailure = "Speech model unavailable"
+            return
+        case .idle, .downloading, .loading:
+            pressFailure = "Speech model still loading…"
             return
         }
         let (resolution, fellBack) = devices.resolveInputDevice()
@@ -189,10 +211,14 @@ final class DictationController {
             }
 
             do {
-                let text = try await transcriber.transcribe(recording)
-                hud.hide()
+                let text = try await speechModel.transcribe(recording)
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty { inserter.insert(trimmed) }
+                if trimmed.isEmpty {
+                    hud.flash("No speech detected")
+                } else {
+                    hud.hide()
+                    inserter.insert(trimmed)
+                }
             } catch {
                 // Never log transcript content; error descriptions only.
                 logger.error("Transcription failed: \(error.localizedDescription, privacy: .public)")
