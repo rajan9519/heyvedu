@@ -17,6 +17,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let controller = DictationController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Writing to a `claude` child that already exited must surface as an error, not
+        // kill the app with SIGPIPE.
+        signal(SIGPIPE, SIG_IGN)
+        #if DEBUG
+        if CommandLine.arguments.contains(CleanupSelfTest.flag) {
+            Task {
+                await CleanupSelfTest.run()
+                exit(0)
+            }
+            return
+        }
+        #endif
         controller.start()
     }
 }

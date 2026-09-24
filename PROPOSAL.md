@@ -16,11 +16,11 @@ pasted at the cursor.
 | Hotkey | Hold Control+Option (push-to-talk); mic starts on press, stops on release |
 | Mic | Only active while the hotkey is held; handles device plug/unplug/switch |
 | ASR | FluidAudio 0.17.1 (exact pin) + `nvidia/parakeet-tdt-0.6b-v3` (Core ML, Neural Engine), Latin-script filter for English |
-| Cleanup | Apple Foundation Models on **every** transcript: self-corrections, fillers, grammar, punctuation |
+| Cleanup | On **every** transcript: self-corrections, fillers, grammar, punctuation. Engine selectable in the menu: Apple Foundation Models (on-device, default) or Claude Code CLI (Haiku/Sonnet; text sent to Anthropic) |
 | Vocabulary | Model prompt only (no deterministic replacement list) |
 | Insertion | Temporarily take over clipboard + synthetic ⌘V, then restore |
 | Feedback | Floating non-activating pill: waveform → "Transcribing…" → "Cleaning…" |
-| Out of scope | History, app awareness, max length, Claude (kept as future `TextCleaner`) |
+| Out of scope | History, app awareness, max length |
 
 ## Pipeline
 
@@ -60,8 +60,22 @@ pasted at the cursor.
   > meaning, tone and person. Do not summarize. Preferred spellings: {vocabulary}
 - Guards: output shares too few words with input, or is far longer → paste raw
   transcript. Model error / guardrail refusal → paste raw transcript.
+- No timeout: cleanup is always awaited, however long the model takes ("Cleaning…"
+  stays in the HUD). New presses are ignored until it finishes.
+- No `prewarm()`: measured on-device, prewarm followed by a few seconds of speech made
+  the first response ~10× slower. The session is created on key press instead.
 - No length cap: transcripts beyond the ~4K-token context are chunked on sentence
   boundaries and cleaned per chunk.
+
+### Claude Code engine (`ClaudeCodeBackend`)
+- `claude -p --input-format stream-json --output-format stream-json` launched once the
+  press commits (250 ms), so CLI startup overlaps speech; transcript sent on release.
+  A plain `-p` waiting on stdin aborts after 3 s, so stream-json input is required.
+- Hardening: no shell (argv array), transcript via stdin (not argv), `--tools ""`,
+  `--strict-mcp-config`, `--disable-slash-commands`, `--setting-sources ""`,
+  `--no-session-persistence`, empty working directory, minimal environment.
+- No `--json-schema`: it adds a hidden tool call (2 turns, ~2× latency).
+- Binary looked up in known install locations (Finder-launched apps get a minimal PATH).
 
 ### Insertion (`TextInserter`)
 - Snapshot clipboard, write text marked `org.nspasteboard.TransientType`, post ⌘V,

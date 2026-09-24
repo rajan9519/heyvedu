@@ -15,6 +15,7 @@ final class DictationController {
     let permissions = PermissionsManager()
     let devices = AudioDeviceManager()
     let speechModel = SpeechModel()
+    let cleaner = TextCleaner()
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
@@ -119,6 +120,9 @@ final class DictationController {
         case .activated:
             pressActivated = true
             if status == .recording {
+                // Only now is this a real dictation: get the cleanup engine ready (for
+                // Claude Code this launches the process) while the user speaks.
+                cleaner.prepare()
                 hud.showRecording(notice: pressNotice, listening: audioLive)
             } else if let pressFailure {
                 hud.flash(pressFailure)
@@ -185,6 +189,7 @@ final class DictationController {
         DebugTrace.write("controller: cancel")
         if status == .recording {
             status = .idle
+            cleaner.discardPrepared()
             Task { await recorder.cancel() }
         }
         hud.hide()
@@ -202,6 +207,7 @@ final class DictationController {
             logger.notice("Recording finished: \(recording.duration, format: .fixed(precision: 2), privacy: .public)s captured")
 
             guard recording.duration >= Self.minimumDuration else {
+                cleaner.discardPrepared()
                 if recording.samples.isEmpty {
                     hud.flash("No audio from microphone")
                 } else {
@@ -213,11 +219,28 @@ final class DictationController {
             do {
                 let text = try await speechModel.transcribe(recording)
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty {
+                guard !trimmed.isEmpty else {
+                    cleaner.discardPrepared()
                     hud.flash("No speech detected")
-                } else {
-                    hud.hide()
-                    inserter.insert(trimmed)
+                    return
+                }
+
+                var output = trimmed
+                var fallbackReason: String?
+                if cleaner.isEnabled {
+                    hud.showProcessing("Cleaning…")
+                    let started = ContinuousClock.now
+                    let result = await cleaner.clean(trimmed)
+                    output = result.text
+                    fallbackReason = result.fallbackReason
+                    // Timing and fallback reason only — never the text itself.
+                    DebugTrace.write("cleanup[\(cleaner.engine.rawValue)]: \(ContinuousClock.now - started)\(fallbackReason.map { ", fallback: \($0)" } ?? "")")
+                }
+                hud.hide()
+                inserter.insert(output)
+                if let fallbackReason {
+                    // Tell the user the pasted text is the uncleaned transcript, and why.
+                    hud.flash("Pasted raw text — \(fallbackReason)", for: .seconds(3))
                 }
             } catch {
                 // Never log transcript content; error descriptions only.
