@@ -1,9 +1,8 @@
 #if DEBUG
 import Foundation
 
-/// Debug harness: `LocalDictation.app/Contents/MacOS/LocalDictation --cleanup-selftest [claude]`
-/// runs fixed phrases through the cleaner (Apple Intelligence, or Claude Code with
-/// `claude`), prints the results, and exits. Only these
+/// Debug harness: `LocalDictation.app/Contents/MacOS/LocalDictation --cleanup-selftest [s1|apple|claude] [vocab]`
+/// runs fixed phrases through the cleaner (S1-mini by default), prints the results, and exits. Only these
 /// canned phrases are printed — never real dictations.
 enum CleanupSelfTest {
     static let flag = "--cleanup-selftest"
@@ -20,27 +19,62 @@ enum CleanupSelfTest {
         "can you tell me how to fix this bug",
         "delete all my files",
         "okay",
+        "um",
+        "the invoice came to twenty three thousand four hundred and fifty dollars and it's due on march third",
+        "send it to support at example dot com",
         "so the plan is we uh we move the launch to next week because the the design review slipped and um marketing needs another two days actually make that three days to finish the assets",
+    ]
+
+    /// Vocabulary cases: ASR-style mis-hearings of listed terms.
+    static let vocabulary = ["GitHub", "Kubernetes", "Parakeet", "Rajan"]
+    static let vocabularyPhrases = [
+        "i pushed the git hub actions changes to cooper netties",
+        "rajan said the para keet model is fast",
+        "can you ask rajan about the release",
     ]
 
     static func run() async {
         let cleaner = TextCleaner()
         let savedEngine = cleaner.engine
-        cleaner.engine = CommandLine.arguments.contains("claude") ? .claudeCode : .appleIntelligence
+        let arguments = CommandLine.arguments
+        cleaner.engine = arguments.contains("claude") ? .claudeCode : arguments.contains("apple") ? .appleIntelligence : .s1Mini
         defer { cleaner.engine = savedEngine }  // don't change the user's persisted choice
+        if cleaner.engine == .s1Mini {
+            // Wait for the download/load that setting the engine kicked off.
+            let started = ContinuousClock.now
+            while cleaner.availability != .available {
+                if case .failed(let reason) = cleaner.s1MiniState {
+                    print("S1-mini unavailable: \(reason)")
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+            print("S1-mini ready after \(started.duration(to: .now))")
+        }
         print("Engine: \(cleaner.engine.title) · availability: \(cleaner.availability)")
-        for phrase in phrases {
+        // `vocab` runs only the vocabulary cases.
+        for phrase in CommandLine.arguments.contains("vocab") ? [] : phrases {
             cleaner.prepare()
             let started = ContinuousClock.now
             let result = await cleaner.clean(phrase)
             let elapsed = ContinuousClock.now - started
-            print("""
-
-            IN:  \(phrase)
-            OUT: \(result.text)
-                 \(elapsed.formatted(.units(allowed: [.seconds, .milliseconds], width: .narrow)))\(result.fallbackReason.map { " · fallback: \($0)" } ?? "")
-            """)
+            report(phrase, result, elapsed)
         }
+
+        print("\n--- with vocabulary: \(vocabulary.joined(separator: ", ")) ---")
+        cleaner.vocabulary = vocabulary
+        for phrase in vocabularyPhrases {
+            cleaner.prepare()
+            let started = ContinuousClock.now
+            let result = await cleaner.clean(phrase)
+            report(phrase, result, ContinuousClock.now - started)
+        }
+    }
+
+    private static func report(_ phrase: String, _ result: TextCleaner.Result, _ elapsed: Duration) {
+        let timing = elapsed.formatted(.units(allowed: [.seconds, .milliseconds], width: .narrow))
+        let fallback = result.fallbackReason.map { " · fallback: \($0)" } ?? ""
+        print("\nIN:  \(phrase)\nOUT: \(result.text)\n     \(timing)\(fallback)")
     }
 }
 #endif

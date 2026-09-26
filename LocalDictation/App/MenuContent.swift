@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuContent: View {
     let controller: DictationController
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Text(controller.statusText)
@@ -25,6 +26,13 @@ struct MenuContent: View {
                     Text(engine.title).tag(engine)
                 }
             }
+            if controller.cleaner.engine == .s1Mini {
+                Picker("Style", selection: styling) {
+                    ForEach(S1MiniBackend.Styling.allCases) { styling in
+                        Text(styling.title).tag(styling)
+                    }
+                }
+            }
             if controller.cleaner.engine == .claudeCode {
                 Picker("Claude Model", selection: claudeModel) {
                     ForEach(ClaudeCodeBackend.Model.allCases) { model in
@@ -36,6 +44,14 @@ struct MenuContent: View {
                 Text("\(reason) — pasting raw transcripts")
             }
         }
+
+        Button("Edit Vocabulary…") {
+            openWindow(id: VocabularyWindow.id)
+            // Menu-bar apps aren't active by default; bring the window to the front.
+            NSApp.activate()
+        }
+
+        Divider()
 
         Picker("Microphone", selection: microphoneSelection) {
             Text(systemDefaultLabel).tag(String?.none)
@@ -61,6 +77,13 @@ struct MenuContent: View {
         Binding(
             get: { controller.cleaner.engine },
             set: { controller.cleaner.engine = $0 }
+        )
+    }
+
+    private var styling: Binding<S1MiniBackend.Styling> {
+        Binding(
+            get: { controller.cleaner.styling },
+            set: { controller.cleaner.styling = $0 }
         )
     }
 

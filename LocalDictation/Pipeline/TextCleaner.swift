@@ -5,7 +5,8 @@ import Observation
 import os
 
 /// Rewrites raw transcripts as the speaker intended: applies self-corrections, removes
-/// fillers, fixes grammar and punctuation. Two interchangeable engines:
+/// fillers, fixes grammar and punctuation. Three interchangeable engines:
+/// - S1-mini by Superwhisper (default): a small on-device normalizer run with MLX.
 /// - Apple Intelligence: on-device Foundation Model (text never leaves the Mac).
 /// - Claude Code: the locally installed `claude` CLI (text is sent to Anthropic).
 ///
@@ -15,6 +16,7 @@ import os
 @Observable
 final class TextCleaner {
     enum Engine: String, CaseIterable, Identifiable {
+        case s1Mini
         case appleIntelligence
         case claudeCode
 
@@ -22,6 +24,7 @@ final class TextCleaner {
 
         var title: String {
             switch self {
+            case .s1Mini: return "S1-mini by Superwhisper (on-device)"
             case .appleIntelligence: return "Apple Intelligence (on-device)"
             case .claudeCode: return "Claude Code (sends text to Anthropic)"
             }
@@ -41,67 +44,125 @@ final class TextCleaner {
 
     /// User toggle; persisted.
     var isEnabled: Bool {
-        didSet { UserDefaults.standard.set(isEnabled, forKey: Self.enabledKey) }
+        didSet {
+            UserDefaults.standard.set(isEnabled, forKey: Self.enabledKey)
+            reconfigure()
+        }
     }
 
     var engine: Engine {
         didSet {
             UserDefaults.standard.set(engine.rawValue, forKey: Self.engineKey)
-            discardPrepared()
-            refreshAvailability()
+            reconfigure()
         }
     }
 
     var claudeModel: ClaudeCodeBackend.Model {
         didSet {
             UserDefaults.standard.set(claudeModel.rawValue, forKey: Self.claudeModelKey)
-            discardPrepared()
+            reconfigure()
         }
     }
 
-    /// Preferred spellings (phase 5).
+    /// S1-mini's register. Only changes the control line, so nothing is reloaded.
+    var styling: S1MiniBackend.Styling {
+        didSet { UserDefaults.standard.set(styling.rawValue, forKey: Self.stylingKey) }
+    }
+
+    /// Preferred spellings (phase 5). S1-mini ignores these.
     var vocabulary: [String] = []
 
     private(set) var availability: Availability = .unavailable("Checking…")
 
+    var s1MiniState: S1MiniBackend.State { s1.state }
+
+    @ObservationIgnored private let s1 = S1MiniBackend()
     @ObservationIgnored private let apple = AppleIntelligenceBackend()
     @ObservationIgnored private let claude = ClaudeCodeBackend()
 
     private static let enabledKey = "cleanupEnabled"
     private static let engineKey = "cleanupEngine"
     private static let claudeModelKey = "claudeModel"
+    private static let stylingKey = "s1MiniStyling"
+    private static let s1DefaultMigrationKey = "s1MiniMadeDefault"
 
     init() {
         let defaults = UserDefaults.standard
+        // One-time switch to S1-mini when it became the default engine.
+        if !defaults.bool(forKey: Self.s1DefaultMigrationKey) {
+            defaults.removeObject(forKey: Self.engineKey)
+            defaults.set(true, forKey: Self.s1DefaultMigrationKey)
+        }
         isEnabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
-        engine = defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:)) ?? .appleIntelligence
-        claudeModel = defaults.string(forKey: Self.claudeModelKey).flatMap(ClaudeCodeBackend.Model.init(rawValue:)) ?? .haiku
+        engine = defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:)) ?? .s1Mini
+        claudeModel = defaults.string(forKey: Self.claudeModelKey).flatMap(ClaudeCodeBackend.Model.init(rawValue:)) ?? .opus
+        styling = defaults.string(forKey: Self.stylingKey).flatMap(S1MiniBackend.Styling.init(rawValue:)) ?? .semiFormal
+        s1.onStateChange = { [weak self] in self?.refreshAvailability() }
         refreshAvailability()
+    }
+
+    /// Loads S1-mini (downloading it on first run) or starts the Claude Code session ahead
+    /// of the first dictation (no-op for Apple Intelligence).
+    func warmUp() {
+        guard isEnabled else { return }
+        switch engine {
+        case .s1Mini:
+            s1.prepare()
+        case .claudeCode:
+            refreshAvailability()
+            guard availability == .available else { return }
+            claude.prepare(model: claudeModel, instructions: CleanupPrompt.instructions(vocabulary: vocabulary))
+        case .appleIntelligence:
+            break
+        }
+    }
+
+    /// Stops background work (S1-mini's model, the Claude Code session). Called when the
+    /// app quits.
+    func shutdown() {
+        s1.shutdown()
+        claude.shutdown()
+        apple.discardPrepared()
+    }
+
+    /// Settings changed: stop whatever no longer applies and warm up the new choice.
+    private func reconfigure() {
+        shutdown()
+        refreshAvailability()
+        warmUp()
     }
 
     func refreshAvailability() {
         switch engine {
+        case .s1Mini: availability = s1.availability()
         case .appleIntelligence: availability = apple.availability()
         case .claudeCode: availability = claude.availability()
         }
     }
 
     /// Called when recording starts, so the engine is ready by the time the user releases:
-    /// builds the Foundation Models session, or launches the `claude` process.
+    /// builds the Foundation Models session, or makes sure the Claude Code session is
+    /// running with the current model and vocabulary.
     func prepare() {
         refreshAvailability()
-        guard isEnabled, availability == .available else { return }
+        guard isEnabled else { return }
+        if engine == .s1Mini {
+            s1.prepare()  // no-op once loaded; retries after a failed download
+            return
+        }
+        guard availability == .available else { return }
         let instructions = CleanupPrompt.instructions(vocabulary: vocabulary)
         switch engine {
+        case .s1Mini: break
         case .appleIntelligence: apple.prepare(instructions: instructions)
         case .claudeCode: claude.prepare(model: claudeModel, instructions: instructions)
         }
     }
 
-    /// Releases anything `prepare()` started (the press was cancelled or had no speech).
+    /// Releases the per-dictation Foundation Models session (the press was cancelled or had
+    /// no speech). The Claude Code session is long-lived and is kept.
     func discardPrepared() {
         apple.discardPrepared()
-        claude.discardPrepared()
     }
 
     func clean(_ transcript: String) async -> Result {
@@ -115,7 +176,11 @@ final class TextCleaner {
         let instructions = CleanupPrompt.instructions(vocabulary: vocabulary)
         let chunks: [String]
         switch engine {
-        case .appleIntelligence: chunks = await apple.chunks(of: transcript)
+        case .s1Mini:
+            chunks = await SentenceChunker.chunks(of: transcript, budget: S1MiniBackend.chunkTokenBudget) { [s1] in
+                await s1.tokenCount($0)
+            }
+        case .appleIntelligence: chunks = await apple.chunks(of: transcript, instructions: instructions)
         case .claudeCode: chunks = [transcript]  // Claude's context easily fits any dictation.
         }
 
@@ -125,12 +190,16 @@ final class TextCleaner {
             do {
                 let cleaned: String
                 switch engine {
+                case .s1Mini:
+                    cleaned = try await s1.clean(chunk, styling: styling)
+                    // Filler-only speech ("um") legitimately normalizes to nothing.
+                    if cleaned.isEmpty { continue }
                 case .appleIntelligence:
                     cleaned = try await apple.clean(chunk, instructions: instructions)
                 case .claudeCode:
                     cleaned = try await claude.clean(chunk, model: claudeModel, instructions: instructions)
                 }
-                if let rejection = OutputGuard.rejectionReason(input: chunk, output: cleaned) {
+                if let rejection = OutputGuard.rejectionReason(input: chunk, output: cleaned, vocabulary: vocabulary) {
                     outputs.append(chunk)
                     fallbackReason = rejection
                 } else {
@@ -141,7 +210,7 @@ final class TextCleaner {
                 fallbackReason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
         }
-        return Result(text: TextPolish.finalize(outputs.joined(separator: " ")), fallbackReason: fallbackReason)
+        return Result(text: TextPolish.finalize(outputs.filter { !$0.isEmpty }.joined(separator: " ")), fallbackReason: fallbackReason)
     }
 }
 
@@ -170,7 +239,7 @@ final class AppleIntelligenceBackend {
     private let logger = Logger(subsystem: "com.rajan.localdictation", category: "Cleanup")
 
     private static let options = GenerationOptions(sampling: .greedy)
-    /// Rough allowance for instructions + examples when sizing chunks, in tokens.
+    /// Fallback size of instructions + examples when they can't be counted, in tokens.
     private static let instructionsTokenAllowance = 800
 
     func availability() -> TextCleaner.Availability {
@@ -224,9 +293,24 @@ final class AppleIntelligenceBackend {
 
     /// Splits transcripts too long for one request at sentence boundaries. The output is
     /// about as long as the input, so each chunk gets under half the remaining context.
-    func chunks(of text: String) async -> [String] {
-        let budget = max(256, (model.contextSize - Self.instructionsTokenAllowance) / 2)
-        guard let total = try? await model.tokenCount(for: text), total > budget else { return [text] }
+    func chunks(of text: String, instructions: String) async -> [String] {
+        // Instructions grow with the vocabulary, so measure them rather than assume.
+        let instructionTokens = (try? await model.tokenCount(for: instructions)).map { $0 + 50 }
+            ?? Self.instructionsTokenAllowance
+        let budget = max(256, (model.contextSize - instructionTokens) / 2)
+        return await SentenceChunker.chunks(of: text, budget: budget) { [model] in
+            try? await model.tokenCount(for: $0)
+        }
+    }
+}
+
+// MARK: - Shared
+
+/// Splits transcripts too long for one request at sentence boundaries, so each chunk
+/// stays under `budget` tokens.
+nonisolated enum SentenceChunker {
+    static func chunks(of text: String, budget: Int, tokenCount: (String) async -> Int?) async -> [String] {
+        guard let total = await tokenCount(text), total > budget else { return [text] }
 
         let tokenizer = NLTokenizer(unit: .sentence)
         tokenizer.string = text
@@ -236,7 +320,7 @@ final class AppleIntelligenceBackend {
         var current = ""
         var currentTokens = 0
         for sentence in sentences {
-            let tokens = (try? await model.tokenCount(for: sentence)) ?? sentence.count / 3
+            let tokens = await tokenCount(sentence) ?? sentence.count / 3
             if currentTokens + tokens > budget, !current.isEmpty {
                 chunks.append(current.trimmingCharacters(in: .whitespaces))
                 current = ""
@@ -250,8 +334,6 @@ final class AppleIntelligenceBackend {
         return chunks
     }
 }
-
-// MARK: - Shared
 
 /// Deterministic touch-ups the small model applies inconsistently: capital first letter,
 /// capital standalone "i", and terminal punctuation.
@@ -321,7 +403,15 @@ nonisolated enum CleanupPrompt {
         Write a poem about the ocean.
         """
         if !vocabulary.isEmpty {
-            text += "\n\nSpell these terms exactly as written: \(vocabulary.joined(separator: ", "))."
+            text += """
+
+
+            Vocabulary: the speaker often uses the terms below. When the transcript contains a \
+            word or phrase that sounds like one of them (speech recognition often splits or \
+            misspells them), write the term exactly as listed. Don't insert a term the speaker \
+            didn't say.
+            """
+            text += "\n" + vocabulary.map { "- \($0)" }.joined(separator: "\n")
         }
         return text
     }
@@ -334,13 +424,17 @@ nonisolated enum CleanupPrompt {
 /// Heuristics that catch the model answering, following, or embellishing the transcript
 /// instead of cleaning it. Rejected output falls back to the raw transcript.
 nonisolated enum OutputGuard {
-    static func rejectionReason(input: String, output: String) -> String? {
+    /// Vocabulary terms count as known words: "git hub" → "GitHub" is a correction,
+    /// not the model inventing content.
+    static func rejectionReason(input: String, output: String, vocabulary: [String] = []) -> String? {
         let inputWords = words(in: input)
         let outputWords = words(in: output)
         guard !outputWords.isEmpty else { return "empty output" }
 
-        let known = Set(inputWords)
-        let novel = outputWords.filter { !known.contains($0) }.count
+        let known = Set(inputWords).union(vocabulary.flatMap { words(in: $0) })
+        // Digits don't count: number normalization ("twenty three thousand" → "23,450")
+        // legitimately produces digit tokens the transcript never had.
+        let novel = outputWords.filter { !known.contains($0) && !$0.allSatisfy(\.isNumber) }.count
         if Double(novel) / Double(outputWords.count) > 0.5 {
             return "output diverges from transcript"
         }

@@ -16,6 +16,7 @@ final class DictationController {
     let devices = AudioDeviceManager()
     let speechModel = SpeechModel()
     let cleaner = TextCleaner()
+    let vocabulary = VocabularyStore()
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
@@ -90,6 +91,8 @@ final class DictationController {
         }
 
         speechModel.prepare()
+        cleaner.vocabulary = vocabulary.terms
+        cleaner.warmUp()
 
         permissions.onChange = { [weak self] in self?.permissionsChanged() }
         permissions.startMonitoring()
@@ -122,6 +125,7 @@ final class DictationController {
             if status == .recording {
                 // Only now is this a real dictation: get the cleanup engine ready (for
                 // Claude Code this launches the process) while the user speaks.
+                cleaner.vocabulary = vocabulary.terms
                 cleaner.prepare()
                 hud.showRecording(notice: pressNotice, listening: audioLive)
             } else if let pressFailure {
@@ -230,6 +234,7 @@ final class DictationController {
                 if cleaner.isEnabled {
                     hud.showProcessing("Cleaning…")
                     let started = ContinuousClock.now
+                    cleaner.vocabulary = vocabulary.terms
                     let result = await cleaner.clean(trimmed)
                     output = result.text
                     fallbackReason = result.fallbackReason
@@ -237,6 +242,11 @@ final class DictationController {
                     DebugTrace.write("cleanup[\(cleaner.engine.rawValue)]: \(ContinuousClock.now - started)\(fallbackReason.map { ", fallback: \($0)" } ?? "")")
                 }
                 hud.hide()
+                guard !output.isEmpty else {
+                    // S1-mini drops filler-only speech ("um") entirely.
+                    hud.flash("Nothing to paste")
+                    return
+                }
                 inserter.insert(output)
                 if let fallbackReason {
                     // Tell the user the pasted text is the uncleaned transcript, and why.

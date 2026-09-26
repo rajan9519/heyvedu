@@ -16,7 +16,7 @@ pasted at the cursor.
 | Hotkey | Hold Control+Option (push-to-talk); mic starts on press, stops on release |
 | Mic | Only active while the hotkey is held; handles device plug/unplug/switch |
 | ASR | FluidAudio 0.17.1 (exact pin) + `nvidia/parakeet-tdt-0.6b-v3` (Core ML, Neural Engine), Latin-script filter for English |
-| Cleanup | On **every** transcript: self-corrections, fillers, grammar, punctuation. Engine selectable in the menu: Apple Foundation Models (on-device, default) or Claude Code CLI (Haiku/Sonnet; text sent to Anthropic) |
+| Cleanup | On **every** transcript: self-corrections, fillers, grammar, punctuation. Engine selectable in the menu: S1-mini by Superwhisper (on-device via MLX, default), Apple Foundation Models (on-device) or Claude Code CLI (Opus 5.5 default, Sonnet, Haiku; text sent to Anthropic) |
 | Vocabulary | Model prompt only (no deterministic replacement list) |
 | Insertion | Temporarily take over clipboard + synthetic ⌘V, then restore |
 | Feedback | Floating non-activating pill: waveform → "Transcribing…" → "Cleaning…" |
@@ -26,7 +26,7 @@ pasted at the cursor.
 
 ```
 [⌃⌥ held] → [AVAudioEngine 16 kHz mono, in memory] → [⌃⌥ released]
-   → [FluidAudio / Parakeet v3] → [Foundation Models cleanup] → [clipboard + ⌘V]
+   → [FluidAudio / Parakeet v3] → [S1-mini cleanup] → [clipboard + ⌘V]
 ```
 
 ## Behaviour details
@@ -58,8 +58,8 @@ pasted at the cursor.
   > self-corrections ("2pm, actually no, 3pm" → "3pm"), remove fillers and false
   > starts, fix grammar, punctuation and capitalization. Keep the speaker's wording,
   > meaning, tone and person. Do not summarize. Preferred spellings: {vocabulary}
-- Guards: output shares too few words with input, or is far longer → paste raw
-  transcript. Model error / guardrail refusal → paste raw transcript.
+- Guards: output shares too few words with input (digit tokens excluded, since number
+  normalization creates them), or is far longer → paste raw transcript. Model error / guardrail refusal → paste raw transcript.
 - No timeout: cleanup is always awaited, however long the model takes ("Cleaning…"
   stays in the HUD). New presses are ignored until it finishes.
 - No `prewarm()`: measured on-device, prewarm followed by a few seconds of speech made
@@ -67,13 +67,38 @@ pasted at the cursor.
 - No length cap: transcripts beyond the ~4K-token context are chunked on sentence
   boundaries and cleaned per chunk.
 
+### S1-mini engine (`S1MiniBackend`, default)
+- S1-mini by Superwhisper: 0.6B Qwen3 fine-tune that only normalizes ASR text (fillers,
+  self-corrections, punctuation, numbers/dates/emails). Not a chat model, so spoken
+  questions or commands are cleaned, never answered. English only. Apache 2.0 plus a
+  naming clause (must be called "S1-mini" by "Superwhisper").
+- Run in-process with `mlx-swift-lm` (BF16 safetensors, ~1.5 GB); tokenizer via
+  `swift-transformers`. Packages pinned to exact versions.
+- Weights downloaded on first use from `superwhisper/s1-mini` at a pinned revision into
+  Application Support; each file checked against a pinned SHA-256 before use; a
+  `.verified` marker skips re-hashing on later launches.
+- Prompt: the model card's fixed system prompt plus a control line
+  `[Styling: …] [Structure: prose] [Context: general]`; Styling is a menu setting
+  (semi-formal default). Thinking disabled (`enable_thinking: false`), greedy decoding,
+  output capped at 1.3× input tokens + 32. Chunks at sentence boundaries above 800
+  tokens.
+- Filler-only input ("um") normalizes to an empty string; nothing is pasted.
+- Ignores the vocabulary list.
+- Measured on M1 Pro: ~2 s load from disk, ~0.1–0.6 s per dictation.
+
 ### Claude Code engine (`ClaudeCodeBackend`)
-- `claude -p --input-format stream-json --output-format stream-json` launched once the
-  press commits (250 ms), so CLI startup overlaps speech; transcript sent on release.
-  A plain `-p` waiting on stdin aborts after 3 s, so stream-json input is required.
-- Hardening: no shell (argv array), transcript via stdin (not argv), `--tools ""`,
-  `--strict-mcp-config`, `--disable-slash-commands`, `--setting-sources ""`,
-  `--no-session-persistence`, empty working directory, minimal environment.
+- Models: Opus 5.5 (`claude-opus-5-5`, default), Sonnet, Haiku — all at `--effort low`
+  with `alwaysThinkingEnabled: false` (cleanup needs no reasoning).
+- One persistent `claude -p --input-format stream-json --output-format stream-json`
+  session serves every dictation (one user message → one `result` line). Started at
+  launch; ~2.2–3.5 s per dictation with the system prompt prompt-cached. Survives long
+  idle gaps (tested 400 s). Recycled every 20 dictations (replacement started
+  immediately) to bound history; restarted when model or vocabulary changes; retried
+  once in a fresh session if it dies.
+- Hardening: no shell (argv array), transcripts via stdin, system prompt via a 0600
+  file (not argv), `--tools ""`, `--strict-mcp-config`, `--disable-slash-commands`,
+  `--setting-sources ""`, `--no-session-persistence`, empty working directory, minimal
+  environment.
 - No `--json-schema`: it adds a hidden tool call (2 turns, ~2× latency).
 - Binary looked up in known install locations (Finder-launched apps get a minimal PATH).
 

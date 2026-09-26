@@ -10,7 +10,17 @@ struct LocalDictationApp: App {
         } label: {
             Image(systemName: appDelegate.controller.menuBarSymbol)
         }
+
+        Window("Vocabulary", id: VocabularyWindow.id) {
+            VocabularyView(store: appDelegate.controller.vocabulary)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultLaunchBehavior(.suppressed)
     }
+}
+
+enum VocabularyWindow {
+    static let id = "vocabulary"
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -30,5 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         #endif
         controller.start()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        controller.cleaner.shutdown()
     }
 }
