@@ -1,4 +1,4 @@
-# LocalDictation
+# HeyVedu
 
 Private, push-to-talk dictation for macOS. Hold **Control + Option**, speak, and
 release to insert polished text into the app you are using.
@@ -58,7 +58,7 @@ The script resolves the pinned Swift packages, builds a Debug app into `build/`,
 and launches:
 
 ```text
-build/Build/Products/Debug/LocalDictation.app
+build/Build/Products/Debug/HeyVedu.app
 ```
 
 If `xcode-select` points to Command Line Tools instead of Xcode, set
@@ -68,13 +68,13 @@ If `xcode-select` points to Command Line Tools instead of Xcode, set
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run.sh
 ```
 
-You can also open `LocalDictation.xcodeproj` in Xcode, select the
-**LocalDictation** scheme, and run it. Xcode may ask you to trust the pinned MLX
+You can also open `HeyVedu.xcodeproj` in Xcode, select the
+**HeyVedu** scheme, and run it. Xcode may ask you to trust the pinned MLX
 build-tool plugin; review the prompt and choose **Trust & Enable** to continue.
 
 ## First launch
 
-LocalDictation is a menu-bar app, so it does not appear in the Dock. Look for
+HeyVedu is a menu-bar app, so it does not appear in the Dock. Look for
 the microphone icon in the menu bar.
 
 1. Grant **Microphone** access so the app can record while the hotkey is held.
@@ -100,7 +100,7 @@ stops working.
 2. Hold **Control + Option** together. Wait for the floating indicator to say
    **Listening** before speaking, especially with Bluetooth microphones.
 3. Speak, then release both keys.
-4. LocalDictation transcribes, optionally cleans the text, and pastes it at the
+4. HeyVedu transcribes, optionally cleans the text, and pastes it at the
    cursor.
 
 Press **Escape** while recording to cancel. A quick tap shorter than about 0.2
@@ -121,7 +121,7 @@ Click the menu-bar icon to configure the app.
 | **Claude Code** | Anthropic's service via the local `claude` CLI | Optional; requires Claude Code to be installed and authenticated. Sends transcript text and configured vocabulary to Anthropic. |
 
 Turn off **Clean Up Transcripts** to paste the raw, locally generated transcript.
-If a cleanup engine fails or rejects a result, LocalDictation pastes the raw
+If a cleanup engine fails or rejects a result, HeyVedu pastes the raw
 transcript instead and tells you why.
 
 ### Vocabulary
@@ -130,7 +130,7 @@ Choose **Edit Vocabulary…** to add preferred spellings for names, products, an
 jargon. The list is stored locally at:
 
 ```text
-~/Library/Application Support/LocalDictation/vocabulary.json
+~/Library/Application Support/HeyVedu/vocabulary.json
 ```
 
 Vocabulary is used by Apple Intelligence and Claude Code. S1-mini currently
@@ -139,7 +139,7 @@ ignores it.
 ### Microphone
 
 Choose **System Default** or a specific input device from the **Microphone**
-menu. If a selected device is missing, LocalDictation falls back to the system
+menu. If a selected device is missing, HeyVedu falls back to the system
 default and shows a notice. If a device disappears while recording, it
 processes the audio captured so far.
 
@@ -157,7 +157,7 @@ Microphone → in-memory audio → on-device Parakeet → on-device S1-mini → 
 | Speech recognition | On-device | On-device | On-device |
 | Transcript cleanup | On-device | On-device | Sent to Anthropic |
 | Preferred vocabulary | Local file; unused by S1-mini | Local file and on-device prompt | Local file and sent to Anthropic as cleanup instructions |
-| Dictation history | Not stored | Not stored | Not stored by LocalDictation; Anthropic's service terms apply to requests |
+| Dictation history | Not stored | Not stored | Not stored by HeyVedu; Anthropic's service terms apply to requests |
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
 **Command + V**, and restoring the previous clipboard contents after roughly
@@ -165,23 +165,23 @@ half a second. Clipboard managers are asked to treat this entry as transient,
 but their behavior is outside the app's control.
 
 Debug builds write timing and error diagnostics to
-`~/Library/Logs/LocalDictation/debug.log`. Audio, transcripts, vocabulary, and
+`~/Library/Logs/HeyVedu/debug.log`. Audio, transcripts, vocabulary, and
 typed keys are not written to this log.
 
 ## Troubleshooting
 
 ### The menu says “Permissions needed”
 
-Open **System Settings → Privacy & Security**, enable LocalDictation under both
+Open **System Settings → Privacy & Security**, enable HeyVedu under both
 **Microphone** and **Accessibility**, then relaunch the app.
 
 ### The hotkey stopped working after a rebuild
 
 Ad-hoc signatures can cause macOS to retain a stale Accessibility entry. Quit
-LocalDictation, run:
+HeyVedu, run:
 
 ```bash
-tccutil reset Accessibility com.rajan.localdictation
+tccutil reset Accessibility com.rajan.heyvedu
 ```
 
 Relaunch the app and grant Accessibility access again.
@@ -211,7 +211,7 @@ This gives the device time to switch into its microphone profile.
 
 ## How it works
 
-LocalDictation records 16 kHz mono audio in memory with AVAudioEngine. FluidAudio
+HeyVedu records 16 kHz mono audio in memory with AVAudioEngine. FluidAudio
 runs Parakeet through Core ML for speech recognition. The selected cleanup
 engine normalizes the transcript, then the app temporarily uses the clipboard
 to paste the result into the frontmost application.
@@ -233,6 +233,6 @@ are also checked against pinned SHA-256 hashes before loading.
 
 ## License
 
-LocalDictation is licensed under the [GNU General Public License v3.0](LICENSE).
+HeyVedu is licensed under the [GNU General Public License v3.0](LICENSE).
 Third-party packages and downloaded models retain their own licenses. S1-mini
 is provided by Superwhisper under its published model license.

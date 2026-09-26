@@ -3,7 +3,7 @@ import Observation
 import os
 
 /// Preferred spellings for names, product terms and jargon, fed to the cleanup prompt.
-/// Stored as JSON in ~/Library/Application Support/LocalDictation/vocabulary.json
+/// Stored as JSON in ~/Library/Application Support/HeyVedu/vocabulary.json
 /// (owner read/write only) so it can also be edited by hand.
 @Observable
 final class VocabularyStore {
@@ -16,7 +16,7 @@ final class VocabularyStore {
     static let maxTermLength = 60
 
     @ObservationIgnored private let fileURL: URL
-    private let logger = Logger(subsystem: "com.rajan.localdictation", category: "Vocabulary")
+    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "Vocabulary")
 
     private struct FileFormat: Codable {
         var version = 1
@@ -30,7 +30,7 @@ final class VocabularyStore {
 
     static var defaultFileURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appending(path: "LocalDictation/vocabulary.json")
+            .appending(path: "HeyVedu/vocabulary.json")
     }
 
     /// Re-reads the file (picks up hand edits).

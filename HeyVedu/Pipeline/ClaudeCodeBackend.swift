@@ -66,7 +66,7 @@ final class ClaudeCodeBackend {
     private static let maxTurnsPerSession = 20
 
     private var session: ClaudeSession?
-    private let logger = Logger(subsystem: "com.rajan.localdictation", category: "Claude")
+    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "Claude")
 
     /// Where Claude Code's installers put the binary. Apps launched from Finder get a
     /// minimal PATH, so look in the known locations rather than relying on it.
@@ -190,7 +190,7 @@ final class ClaudeCodeBackend {
     /// An empty directory, so Claude Code finds no project files or CLAUDE.md.
     private static func workingDirectory() throws -> URL {
         let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appending(path: "LocalDictation/claude-workdir", directoryHint: .isDirectory)
+            .appending(path: "HeyVedu/claude-workdir", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }

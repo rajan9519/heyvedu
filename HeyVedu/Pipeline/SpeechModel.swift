@@ -20,7 +20,7 @@ final class SpeechModel: Transcriber {
 
     @ObservationIgnored private let engine = ParakeetEngine()
     @ObservationIgnored private var prepareTask: Task<Void, Never>?
-    private let logger = Logger(subsystem: "com.rajan.localdictation", category: "SpeechModel")
+    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "SpeechModel")
 
     var isReady: Bool { state == .ready }
 

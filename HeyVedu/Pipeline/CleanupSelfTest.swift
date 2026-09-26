@@ -1,7 +1,7 @@
 #if DEBUG
 import Foundation
 
-/// Debug harness: `LocalDictation.app/Contents/MacOS/LocalDictation --cleanup-selftest [s1|apple|claude] [vocab]`
+/// Debug harness: `HeyVedu.app/Contents/MacOS/HeyVedu --cleanup-selftest [s1|apple|claude] [vocab]`
 /// runs fixed phrases through the cleaner (S1-mini by default), prints the results, and exits. Only these
 /// canned phrases are printed — never real dictations.
 enum CleanupSelfTest {

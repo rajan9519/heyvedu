@@ -1,4 +1,4 @@
-# LocalDictation — Product Proposal
+# HeyVedu — Product Proposal
 
 A local-first, push-to-talk dictation app for macOS. Hold **Control+Option**, speak,
 release — the speech is transcribed on-device, cleaned up by an on-device LLM, and
@@ -118,7 +118,7 @@ pasted at the cursor.
 ## Known trade-offs
 - Unsigned (ad-hoc) builds change signature on every rebuild, so macOS drops the
   Accessibility grant: remove/re-add the app in System Settings, or run
-  `tccutil reset Accessibility com.rajan.localdictation`.
+  `tccutil reset Accessibility com.rajan.heyvedu`.
 - Clipboard restore copies concrete data only; lazily-provided/promised clipboard
   contents from other apps may not survive.
 - ⌘V is posted by key code (ANSI "V"); non-QWERTY layouts may need adjustment.

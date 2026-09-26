@@ -15,14 +15,14 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		1D0000000000000000000004 /* LocalDictation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LocalDictation.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		1D0000000000000000000011 /* LocalDictation.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LocalDictation.entitlements; sourceTree = "<group>"; };
+		1D0000000000000000000004 /* HeyVedu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeyVedu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D0000000000000000000011 /* HeyVedu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HeyVedu.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		1D0000000000000000000005 /* LocalDictation */ = {
+		1D0000000000000000000005 /* HeyVedu */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = LocalDictation;
+			path = HeyVedu;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -47,7 +47,7 @@
 			isa = PBXGroup;
 			children = (
 				1D0000000000000000000010 /* Config */,
-				1D0000000000000000000005 /* LocalDictation */,
+				1D0000000000000000000005 /* HeyVedu */,
 				1D0000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -55,7 +55,7 @@
 		1D0000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1D0000000000000000000004 /* LocalDictation.app */,
+				1D0000000000000000000004 /* HeyVedu.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -63,7 +63,7 @@
 		1D0000000000000000000010 /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				1D0000000000000000000011 /* LocalDictation.entitlements */,
+				1D0000000000000000000011 /* HeyVedu.entitlements */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -71,9 +71,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		1D0000000000000000000006 /* LocalDictation */ = {
+		1D0000000000000000000006 /* HeyVedu */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1D000000000000000000000D /* Build configuration list for PBXNativeTarget "LocalDictation" */;
+			buildConfigurationList = 1D000000000000000000000D /* Build configuration list for PBXNativeTarget "HeyVedu" */;
 			buildPhases = (
 				1D0000000000000000000007 /* Sources */,
 				1D0000000000000000000008 /* Frameworks */,
@@ -84,9 +84,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				1D0000000000000000000005 /* LocalDictation */,
+				1D0000000000000000000005 /* HeyVedu */,
 			);
-			name = LocalDictation;
+			name = HeyVedu;
 			packageProductDependencies = (
 				1D0000000000000000000013 /* FluidAudio */,
 				1D0000000000000000000018 /* MLXLLM */,
@@ -94,8 +94,8 @@
 				1D000000000000000000001C /* MLX */,
 				1D000000000000000000001E /* Tokenizers */,
 			);
-			productName = LocalDictation;
-			productReference = 1D0000000000000000000004 /* LocalDictation.app */;
+			productName = HeyVedu;
+			productReference = 1D0000000000000000000004 /* HeyVedu.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -113,7 +113,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 1D000000000000000000000A /* Build configuration list for PBXProject "LocalDictation" */;
+			buildConfigurationList = 1D000000000000000000000A /* Build configuration list for PBXProject "HeyVedu" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -133,7 +133,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				1D0000000000000000000006 /* LocalDictation */,
+				1D0000000000000000000006 /* HeyVedu */,
 			);
 		};
 /* End PBXProject section */
@@ -205,7 +205,7 @@
 		1D000000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Config/LocalDictation.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Config/HeyVedu.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -214,16 +214,16 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = LocalDictation;
+				INFOPLIST_KEY_CFBundleDisplayName = HeyVedu;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "LocalDictation records audio only while you hold Control+Option, and transcribes it on this Mac.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HeyVedu records audio only while you hold Control+Option, and transcribes it on this Mac.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rajan.localdictation;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rajan.heyvedu;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -235,7 +235,7 @@
 		1D000000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Config/LocalDictation.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Config/HeyVedu.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -244,16 +244,16 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = LocalDictation;
+				INFOPLIST_KEY_CFBundleDisplayName = HeyVedu;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "LocalDictation records audio only while you hold Control+Option, and transcribes it on this Mac.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HeyVedu records audio only while you hold Control+Option, and transcribes it on this Mac.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rajan.localdictation;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rajan.heyvedu;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -265,7 +265,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		1D000000000000000000000A /* Build configuration list for PBXProject "LocalDictation" */ = {
+		1D000000000000000000000A /* Build configuration list for PBXProject "HeyVedu" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1D000000000000000000000B /* Debug */,
@@ -274,7 +274,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1D000000000000000000000D /* Build configuration list for PBXNativeTarget "LocalDictation" */ = {
+		1D000000000000000000000D /* Build configuration list for PBXNativeTarget "HeyVedu" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1D000000000000000000000E /* Debug */,

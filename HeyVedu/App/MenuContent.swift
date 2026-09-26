@@ -62,7 +62,7 @@ struct MenuContent: View {
 
         Divider()
 
-        Button("Quit LocalDictation") { NSApp.terminate(nil) }
+        Button("Quit HeyVedu") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
 

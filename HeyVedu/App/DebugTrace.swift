@@ -1,13 +1,13 @@
 import Foundation
 
-/// Debug-only diagnostics written to ~/Library/Logs/LocalDictation/debug.log.
+/// Debug-only diagnostics written to ~/Library/Logs/HeyVedu/debug.log.
 /// Never pass transcript text or typed keys here.
 nonisolated enum DebugTrace {
     #if DEBUG
-    private static let queue = DispatchQueue(label: "com.rajan.localdictation.debugtrace")
+    private static let queue = DispatchQueue(label: "com.rajan.heyvedu.debugtrace")
     private static let fileURL: URL = {
         let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appending(path: "Library/Logs/LocalDictation", directoryHint: .isDirectory)
+            .appending(path: "Library/Logs/HeyVedu", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appending(path: "debug.log")
     }()

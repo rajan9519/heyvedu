@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct LocalDictationApp: App {
+struct HeyVeduApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {

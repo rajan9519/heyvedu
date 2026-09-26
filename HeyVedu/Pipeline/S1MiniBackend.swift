@@ -65,7 +65,7 @@ final class S1MiniBackend {
 
     @ObservationIgnored private var container: ModelContainer?
     @ObservationIgnored private var loadTask: Task<Void, Never>?
-    private let logger = Logger(subsystem: "com.rajan.localdictation", category: "S1Mini")
+    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "S1Mini")
 
     // MARK: Pinned model
 
@@ -193,7 +193,7 @@ final class S1MiniBackend {
 
     private nonisolated static var modelDirectory: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appending(path: "LocalDictation/Models/s1-mini/\(revision)", directoryHint: .isDirectory)
+            .appending(path: "HeyVedu/Models/s1-mini/\(revision)", directoryHint: .isDirectory)
     }
 
     /// Marker written after every file has passed its hash check, so later launches only
