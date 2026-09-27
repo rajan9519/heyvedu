@@ -120,17 +120,21 @@ transcript instead and tells you why.
 
 ### Advanced cleanup
 
-The **Advanced Cleanup…** menu offers optional online engines when their CLIs
-are installed and authenticated:
+The **Advanced Cleanup…** menu can use your own locally installed and
+authenticated Claude Code or Codex CLI. These are your existing Claude Code or
+Codex sessions; they are not HeyVedu accounts, services, or integrations.
 
 | Engine | Service | Data sent |
 | --- | --- | --- |
-| **Claude Code** | Anthropic via the local `claude` CLI | Transcript text and configured vocabulary |
-| **Codex** | OpenAI via the local `codex` CLI | Transcript text and configured vocabulary |
+| **Claude Code** | Your local `claude` CLI and its authenticated session | Transcript text and configured vocabulary |
+| **Codex** | Your local `codex` CLI and its authenticated session | Transcript text and configured vocabulary |
 
-Selecting one of these engines enables cleanup with that service. Codex uses
-an ephemeral CLI session for each dictation. Choose **Switch to On-Device
-Cleanup** in the main menu to return to local cleanup.
+Selecting one of these engines asks the corresponding CLI on your Mac to clean
+up the transcript using the account and configuration already associated with
+that CLI. HeyVedu does not provide, own, or authenticate the Claude Code or
+Codex session, and it does not upload through a HeyVedu server. Codex uses an
+ephemeral CLI session for each dictation. Choose **Switch to On-Device Cleanup**
+in the main menu to return to local cleanup.
 
 ### Vocabulary
 
@@ -169,9 +173,12 @@ Microphone → in-memory audio → on-device Parakeet → on-device S1-mini → 
 | Dictation history | Not stored | Not stored |
 
 If you choose an [advanced online engine](#advanced-cleanup), only cleanup
-changes: recorded audio and speech recognition stay on-device, while transcript
-text and configured vocabulary are sent to Anthropic or OpenAI. HeyVedu does
-not store dictation history; the selected provider's terms apply to requests.
+changes: recorded audio and speech recognition stay on-device. HeyVedu passes
+the transcript text and configured vocabulary to your locally installed
+`claude` or `codex` CLI, which sends the request through your own authenticated
+Claude Code or Codex session to Anthropic or OpenAI. The request is not sent
+through a HeyVedu account or server. HeyVedu does not store dictation history;
+your CLI configuration and the selected provider's terms apply to requests.
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
 **Command + V**, and restoring the previous clipboard contents after roughly
