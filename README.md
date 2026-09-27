@@ -3,15 +3,10 @@
 Private, push-to-talk dictation for macOS. Hold **Control + Option**, speak, and
 release to insert polished text into the app you are using.
 
-Speech recognition runs on your Mac with Parakeet, and the default S1-mini
-cleanup engine also runs locally. Audio is kept in memory, transcripts are not
-logged, and no dictation data leaves your Mac when using **S1-mini**, **Apple
-Intelligence**, or cleanup-disabled mode.
-
-> [!IMPORTANT]
-> The optional **Claude Code** and **Codex** cleanup engines send transcript
-> text—and any vocabulary supplied to them—to Anthropic and OpenAI,
-> respectively. The app labels these options explicitly.
+Speech recognition and the default S1-mini text cleanup run on your Mac. Audio
+stays in memory, transcripts are not logged, and the default dictation flow
+does not upload your speech or text. The default flow needs an internet
+connection only for the initial build and model downloads.
 
 ## What it does
 
@@ -25,8 +20,7 @@ Intelligence**, or cleanup-disabled mode.
 - Offers local cleanup with S1-mini by Superwhisper (the default) or Apple
   Intelligence.
 - Lets you select any connected microphone and follows device changes.
-- Supports a local preferred-spellings vocabulary for Apple Intelligence,
-  Claude Code, and Codex cleanup.
+- Supports a local preferred-spellings vocabulary for Apple Intelligence cleanup.
 - Keeps no dictation history and never writes recorded audio to disk.
 
 For example:
@@ -119,15 +113,24 @@ Click the menu-bar icon to configure the app.
 | --- | --- | --- |
 | **S1-mini by Superwhisper** | On your Mac | Default; English-only; choose Casual, Semi-casual, Semi-formal, or Formal style. Does not use the vocabulary list. |
 | **Apple Intelligence** | On your Mac | Uses Apple's on-device Foundation Model. Falls back to the raw transcript if the model is unavailable. |
-| **Claude Code** | Anthropic's service via the local `claude` CLI | Optional; requires Claude Code to be installed and authenticated. Sends transcript text and configured vocabulary to Anthropic. |
-| **Codex** | OpenAI's service via the local `codex` CLI | Optional; requires Codex to be installed and authenticated. Sends transcript text and configured vocabulary to OpenAI. Each dictation uses an ephemeral CLI session. |
-
-The menu shows Claude Code and Codex when their respective CLIs are installed;
-when both are present, you can choose either one.
 
 Turn off **Clean Up Transcripts** to paste the raw, locally generated transcript.
 If a cleanup engine fails or rejects a result, HeyVedu pastes the raw
 transcript instead and tells you why.
+
+### Advanced cleanup
+
+The **Advanced Cleanup…** menu offers optional online engines when their CLIs
+are installed and authenticated:
+
+| Engine | Service | Data sent |
+| --- | --- | --- |
+| **Claude Code** | Anthropic via the local `claude` CLI | Transcript text and configured vocabulary |
+| **Codex** | OpenAI via the local `codex` CLI | Transcript text and configured vocabulary |
+
+Selecting one of these engines enables cleanup with that service. Codex uses
+an ephemeral CLI session for each dictation. Choose **Switch to On-Device
+Cleanup** in the main menu to return to local cleanup.
 
 ### Vocabulary
 
@@ -138,8 +141,9 @@ jargon. The list is stored locally at:
 ~/Library/Application Support/HeyVedu/vocabulary.json
 ```
 
-Vocabulary is used by Apple Intelligence, Claude Code, and Codex. S1-mini currently
-ignores it.
+Vocabulary is used by Apple Intelligence. If you select an advanced online
+engine, it is sent with the transcript as cleanup instructions. S1-mini
+currently ignores it.
 
 ### Microphone
 
@@ -156,13 +160,18 @@ The fully local path is the default:
 Microphone → in-memory audio → on-device Parakeet → on-device S1-mini → paste
 ```
 
-| Data | S1-mini / cleanup off | Apple Intelligence | Claude Code | Codex |
-| --- | --- | --- | --- | --- |
-| Recorded audio | Memory only; stays on-device | Memory only; stays on-device | Memory only; stays on-device | Memory only; stays on-device |
-| Speech recognition | On-device | On-device | On-device | On-device |
-| Transcript cleanup | On-device | On-device | Sent to Anthropic | Sent to OpenAI |
-| Preferred vocabulary | Local file; unused by S1-mini | Local file and on-device prompt | Local file and sent to Anthropic as cleanup instructions | Local file and sent to OpenAI as cleanup instructions |
-| Dictation history | Not stored | Not stored | Not stored by HeyVedu; Anthropic's service terms apply to requests | Codex runs with ephemeral sessions; OpenAI's service terms apply to requests |
+| Data | S1-mini / cleanup off | Apple Intelligence |
+| --- | --- | --- |
+| Recorded audio | Memory only; stays on-device | Memory only; stays on-device |
+| Speech recognition | On-device | On-device |
+| Transcript cleanup | On-device | On-device |
+| Preferred vocabulary | Local file; unused by S1-mini | Local file and on-device prompt |
+| Dictation history | Not stored | Not stored |
+
+If you choose an [advanced online engine](#advanced-cleanup), only cleanup
+changes: recorded audio and speech recognition stay on-device, while transcript
+text and configured vocabulary are sent to Anthropic or OpenAI. HeyVedu does
+not store dictation history; the selected provider's terms apply to requests.
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
 **Command + V**, and restoring the previous clipboard contents after roughly

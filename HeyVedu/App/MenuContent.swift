@@ -21,22 +21,21 @@ struct MenuContent: View {
 
         Toggle("Clean Up Transcripts", isOn: cleanupEnabled)
         if controller.cleaner.isEnabled {
-            Picker("Cleanup Engine", selection: cleanupEngine) {
-                ForEach(controller.cleaner.selectableEngines) { engine in
-                    Text(engine.title).tag(engine)
+            if isUsingLocalCleanup {
+                Picker("On-Device Cleanup", selection: cleanupEngine) {
+                    Text(TextCleaner.Engine.s1Mini.title).tag(TextCleaner.Engine.s1Mini)
+                    Text(TextCleaner.Engine.appleIntelligence.title).tag(TextCleaner.Engine.appleIntelligence)
                 }
+            } else {
+                Button("Switch to On-Device Cleanup") {
+                    controller.cleaner.engine = .s1Mini
+                }
+                Text("Advanced cleanup is active")
             }
             if controller.cleaner.engine == .s1Mini {
                 Picker("Style", selection: styling) {
                     ForEach(S1MiniBackend.Styling.allCases) { styling in
                         Text(styling.title).tag(styling)
-                    }
-                }
-            }
-            if controller.cleaner.engine == .claudeCode {
-                Picker("Claude Model", selection: claudeModel) {
-                    ForEach(ClaudeCodeBackend.Model.allCases) { model in
-                        Text(model.title).tag(model)
                     }
                 }
             }
@@ -49,6 +48,46 @@ struct MenuContent: View {
             openWindow(id: VocabularyWindow.id)
             // Menu-bar apps aren't active by default; bring the window to the front.
             NSApp.activate()
+        }
+
+        Menu("Advanced Cleanup…") {
+            Text("Online engines send transcripts and vocabulary to their providers.")
+            if controller.cleaner.selectableEngines.contains(.claudeCode) {
+                Button {
+                    controller.cleaner.engine = .claudeCode
+                    controller.cleaner.isEnabled = true
+                } label: {
+                    if controller.cleaner.engine == .claudeCode {
+                        Label("Claude Code (Anthropic)", systemImage: "checkmark")
+                    } else {
+                        Text("Use Claude Code (Anthropic)")
+                    }
+                }
+            }
+            if controller.cleaner.selectableEngines.contains(.codex) {
+                Button {
+                    controller.cleaner.engine = .codex
+                    controller.cleaner.isEnabled = true
+                } label: {
+                    if controller.cleaner.engine == .codex {
+                        Label("Codex (OpenAI)", systemImage: "checkmark")
+                    } else {
+                        Text("Use Codex (OpenAI)")
+                    }
+                }
+            }
+            if !controller.cleaner.selectableEngines.contains(.claudeCode)
+                && !controller.cleaner.selectableEngines.contains(.codex) {
+                Text("Install and sign in to a supported CLI to enable online cleanup.")
+            }
+            if controller.cleaner.engine == .claudeCode {
+                Divider()
+                Picker("Claude Model", selection: claudeModel) {
+                    ForEach(ClaudeCodeBackend.Model.allCases) { model in
+                        Text(model.title).tag(model)
+                    }
+                }
+            }
         }
 
         Divider()
@@ -71,6 +110,10 @@ struct MenuContent: View {
             get: { controller.cleaner.isEnabled },
             set: { controller.cleaner.isEnabled = $0 }
         )
+    }
+
+    private var isUsingLocalCleanup: Bool {
+        controller.cleaner.engine == .s1Mini || controller.cleaner.engine == .appleIntelligence
     }
 
     private var cleanupEngine: Binding<TextCleaner.Engine> {
