@@ -58,7 +58,7 @@ pasted at the cursor.
   > self-corrections ("2pm, actually no, 3pm" → "3pm"), remove fillers and false
   > starts, fix grammar, punctuation and capitalization. Keep the speaker's wording,
   > meaning, tone and person. Do not summarize. Preferred spellings: {vocabulary}
-- Guards: output shares too few words with input (digit tokens excluded, since number
+- Chat-engine guards: output shares too few words with input (digit tokens excluded, since number
   normalization creates them), or is far longer → paste raw transcript. Model error / guardrail refusal → paste raw transcript.
 - No timeout: cleanup is always awaited, however long the model takes ("Cleaning…"
   stays in the HUD). New presses are ignored until it finishes.
@@ -78,10 +78,14 @@ pasted at the cursor.
   Application Support; each file checked against a pinned SHA-256 before use; a
   `.verified` marker skips re-hashing on later launches.
 - Prompt: the model card's fixed system prompt plus a control line
-  `[Styling: …] [Structure: prose] [Context: general]`; Styling is a menu setting
+  `[Styling: …] [Structure: lists] [Context: general]`; clear enumerations of at least
+  three items may become bullets; other content stays prose. Styling is a menu setting
   (semi-formal default). Thinking disabled (`enable_thinking: false`), greedy decoding,
-  output capped at 1.3× input tokens + 32. Chunks at sentence boundaries above 800
-  tokens.
+  output capped at ceil(1.3× input tokens) + 32. Chunks at sentence boundaries above
+  800 tokens, with whitespace/character splits for oversized unpunctuated sentences.
+- Preserves the model's style without forced capitalization or terminal punctuation.
+  Chat-engine word-overlap guards are skipped: contraction expansion and large
+  reductions from fillers/self-corrections are valid normalization.
 - Filler-only input ("um") normalizes to an empty string; nothing is pasted.
 - Ignores the vocabulary list.
 - Measured on M1 Pro: ~2 s load from disk, ~0.1–0.6 s per dictation.

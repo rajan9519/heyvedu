@@ -162,16 +162,17 @@ final class S1MiniBackend {
     func clean(_ chunk: String, styling: Styling) async throws -> String {
         guard let container else { throw BackendError.notReady(availability().reason ?? "S1-mini isn't loaded") }
 
-        let control = "[Styling: \(styling.rawValue)] [Structure: prose] [Context: general]"
+        let transcript = Self.sanitize(chunk)
+        let control = "[Styling: \(styling.rawValue)] [Structure: lists] [Context: general]"
         let input = UserInput(
-            chat: [.system(Self.systemPrompt), .user("\(control)\n\(Self.sanitize(chunk))")],
+            chat: [.system(Self.systemPrompt), .user("\(control)\n\(transcript)")],
             // Required: with thinking on (the template default) the model returns nothing.
             additionalContext: ["enable_thinking": false]
         )
-        let transcriptTokens = await container.encode(chunk).count
+        let transcriptTokens = await container.encode(transcript).count
         // Model card: greedy decoding, output capped at ~1.3× the input plus headroom.
         let parameters = GenerateParameters(
-            maxTokens: Int(Double(transcriptTokens) * 1.3) + 32,
+            maxTokens: Int(ceil(Double(transcriptTokens) * 1.3)) + 32,
             temperature: 0
         )
 

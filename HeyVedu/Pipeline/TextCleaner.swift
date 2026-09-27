@@ -214,8 +214,11 @@ final class TextCleaner {
                 switch engine {
                 case .s1Mini:
                     cleaned = try await s1.clean(chunk, styling: styling)
-                    // Filler-only speech ("um") legitimately normalizes to nothing.
-                    if cleaned.isEmpty { continue }
+                    // S1-mini can legitimately remove most of a transcript, expand
+                    // contractions, or return nothing. Chat-model overlap heuristics
+                    // reject these trained transformations (especially formal styling).
+                    if !cleaned.isEmpty { outputs.append(cleaned) }
+                    continue
                 case .appleIntelligence:
                     cleaned = try await apple.clean(chunk, instructions: instructions)
                 case .claudeCode:
@@ -234,7 +237,10 @@ final class TextCleaner {
                 fallbackReason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
         }
-        return Result(text: TextPolish.finalize(outputs.filter { !$0.isEmpty }.joined(separator: " ")), fallbackReason: fallbackReason)
+        let joined = outputs.filter { !$0.isEmpty }.joined(separator: " ")
+        // The S1-mini control line owns casing and punctuation, including lowercase
+        // sentence starts and omitted final periods in casual registers.
+        return Result(text: engine == .s1Mini ? joined : TextPolish.finalize(joined), fallbackReason: fallbackReason)
     }
 }
 
@@ -342,20 +348,44 @@ nonisolated enum SentenceChunker {
 
         var chunks: [String] = []
         var current = ""
-        var currentTokens = 0
         for sentence in sentences {
-            let tokens = await tokenCount(sentence) ?? sentence.count / 3
-            if currentTokens + tokens > budget, !current.isEmpty {
-                chunks.append(current.trimmingCharacters(in: .whitespaces))
-                current = ""
-                currentTokens = 0
+            for piece in await splitOversized(sentence, budget: budget, tokenCount: tokenCount) {
+                let candidate = current.isEmpty ? piece : current + " " + piece
+                // Token counts aren't additive across sentence boundaries.
+                if !current.isEmpty, await count(candidate, tokenCount: tokenCount) > budget {
+                    chunks.append(current)
+                    current = piece
+                } else {
+                    current = candidate
+                }
             }
-            current += sentence
-            currentTokens += tokens
         }
-        if !current.isEmpty { chunks.append(current.trimmingCharacters(in: .whitespaces)) }
+        if !current.isEmpty { chunks.append(current) }
         DebugTrace.write("cleanup: split \(total) tokens into \(chunks.count) chunks")
         return chunks
+    }
+
+    /// ASR often has no punctuation. Split oversized sentences at whitespace, and
+    /// only fall back to character boundaries for an oversized unbroken word.
+    private static func splitOversized(
+        _ text: String, budget: Int, tokenCount: (String) async -> Int?
+    ) async -> [String] {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return [] }
+        guard await count(text, tokenCount: tokenCount) > budget, text.count > 1 else { return [text] }
+        let middle = text.index(text.startIndex, offsetBy: text.count / 2)
+        let whitespace = [text[..<middle].lastIndex(where: \.isWhitespace),
+                          text[middle...].firstIndex(where: \.isWhitespace)].compactMap { $0 }
+        let split = whitespace.min {
+            abs(text.distance(from: middle, to: $0)) < abs(text.distance(from: middle, to: $1))
+        } ?? middle
+        let left = await splitOversized(String(text[..<split]), budget: budget, tokenCount: tokenCount)
+        let right = await splitOversized(String(text[split...]), budget: budget, tokenCount: tokenCount)
+        return left + right
+    }
+
+    private static func count(_ text: String, tokenCount: (String) async -> Int?) async -> Int {
+        await tokenCount(text) ?? text.utf8.count
     }
 }
 
