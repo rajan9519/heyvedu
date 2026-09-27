@@ -8,7 +8,7 @@ import os
 /// fillers, fixes grammar and punctuation. Three interchangeable engines:
 /// - S1-mini by Superwhisper (default): a small on-device normalizer run with MLX.
 /// - Apple Intelligence: on-device Foundation Model (text never leaves the Mac).
-/// - Claude Code: the locally installed `claude` CLI (text is sent to Anthropic).
+/// - Claude Code or Codex: locally installed CLIs (text is sent to their service).
 ///
 /// There is no timeout: slow responses are awaited. Only when an engine cannot produce
 /// usable text (unavailable, refusal, error, or an output that drifts from what was said)
@@ -19,6 +19,7 @@ final class TextCleaner {
         case s1Mini
         case appleIntelligence
         case claudeCode
+        case codex
 
         var id: String { rawValue }
 
@@ -27,6 +28,7 @@ final class TextCleaner {
             case .s1Mini: return "S1-mini by Superwhisper (on-device)"
             case .appleIntelligence: return "Apple Intelligence (on-device)"
             case .claudeCode: return "Claude Code (sends text to Anthropic)"
+            case .codex: return "Codex (sends text to OpenAI)"
             }
         }
     }
@@ -76,9 +78,20 @@ final class TextCleaner {
 
     var s1MiniState: S1MiniBackend.State { s1.state }
 
+    var selectableEngines: [Engine] {
+        Engine.allCases.filter {
+            switch $0 {
+            case .s1Mini, .appleIntelligence: return true
+            case .claudeCode: return claude.availability() == .available
+            case .codex: return codex.availability() == .available
+            }
+        }
+    }
+
     @ObservationIgnored private let s1 = S1MiniBackend()
     @ObservationIgnored private let apple = AppleIntelligenceBackend()
     @ObservationIgnored private let claude = ClaudeCodeBackend()
+    @ObservationIgnored private let codex = CodexBackend()
 
     private static let enabledKey = "cleanupEnabled"
     private static let engineKey = "cleanupEngine"
@@ -97,6 +110,11 @@ final class TextCleaner {
         engine = defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:)) ?? .s1Mini
         claudeModel = defaults.string(forKey: Self.claudeModelKey).flatMap(ClaudeCodeBackend.Model.init(rawValue:)) ?? .opus
         styling = defaults.string(forKey: Self.stylingKey).flatMap(S1MiniBackend.Styling.init(rawValue:)) ?? .semiFormal
+        if (engine == .claudeCode && claude.availability() != .available)
+            || (engine == .codex && codex.availability() != .available) {
+            engine = .s1Mini
+            defaults.set(engine.rawValue, forKey: Self.engineKey)
+        }
         s1.onStateChange = { [weak self] in self?.refreshAvailability() }
         refreshAvailability()
     }
@@ -112,6 +130,8 @@ final class TextCleaner {
             refreshAvailability()
             guard availability == .available else { return }
             claude.prepare(model: claudeModel, instructions: CleanupPrompt.instructions(vocabulary: vocabulary))
+        case .codex:
+            break
         case .appleIntelligence:
             break
         }
@@ -137,6 +157,7 @@ final class TextCleaner {
         case .s1Mini: availability = s1.availability()
         case .appleIntelligence: availability = apple.availability()
         case .claudeCode: availability = claude.availability()
+        case .codex: availability = codex.availability()
         }
     }
 
@@ -156,6 +177,7 @@ final class TextCleaner {
         case .s1Mini: break
         case .appleIntelligence: apple.prepare(instructions: instructions)
         case .claudeCode: claude.prepare(model: claudeModel, instructions: instructions)
+        case .codex: break
         }
     }
 
@@ -181,7 +203,7 @@ final class TextCleaner {
                 await s1.tokenCount($0)
             }
         case .appleIntelligence: chunks = await apple.chunks(of: transcript, instructions: instructions)
-        case .claudeCode: chunks = [transcript]  // Claude's context easily fits any dictation.
+        case .claudeCode, .codex: chunks = [transcript]
         }
 
         var outputs: [String] = []
@@ -198,6 +220,8 @@ final class TextCleaner {
                     cleaned = try await apple.clean(chunk, instructions: instructions)
                 case .claudeCode:
                     cleaned = try await claude.clean(chunk, model: claudeModel, instructions: instructions)
+                case .codex:
+                    cleaned = try await codex.clean(chunk, instructions: instructions)
                 }
                 if let rejection = OutputGuard.rejectionReason(input: chunk, output: cleaned, vocabulary: vocabulary) {
                     outputs.append(chunk)

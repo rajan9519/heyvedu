@@ -102,6 +102,14 @@ pasted at the cursor.
 - No `--json-schema`: it adds a hidden tool call (2 turns, ~2× latency).
 - Binary looked up in known install locations (Finder-launched apps get a minimal PATH).
 
+### Codex engine (`CodexBackend`)
+- Available when the local `codex` CLI is installed. The menu offers both Codex
+  and Claude Code when both binaries are present.
+- Runs `codex exec` in a separate ephemeral session for each dictation, with a
+  read-only sandbox, empty working directory, and no loaded user config or rules.
+- Transcript and cleanup instructions go over stdin. The final answer is read
+  from a temporary user-only file and removed after the request.
+
 ### Insertion (`TextInserter`)
 - Snapshot clipboard, write text marked `org.nspasteboard.TransientType`, post ⌘V,
   restore the snapshot ~500 ms later unless the clipboard changed meanwhile.

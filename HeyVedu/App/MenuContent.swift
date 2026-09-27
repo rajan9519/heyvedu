@@ -22,7 +22,7 @@ struct MenuContent: View {
         Toggle("Clean Up Transcripts", isOn: cleanupEnabled)
         if controller.cleaner.isEnabled {
             Picker("Cleanup Engine", selection: cleanupEngine) {
-                ForEach(TextCleaner.Engine.allCases) { engine in
+                ForEach(controller.cleaner.selectableEngines) { engine in
                     Text(engine.title).tag(engine)
                 }
             }

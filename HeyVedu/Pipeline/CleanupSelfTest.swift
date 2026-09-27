@@ -1,7 +1,7 @@
 #if DEBUG
 import Foundation
 
-/// Debug harness: `HeyVedu.app/Contents/MacOS/HeyVedu --cleanup-selftest [s1|apple|claude] [vocab]`
+/// Debug harness: `HeyVedu.app/Contents/MacOS/HeyVedu --cleanup-selftest [s1|apple|claude|codex] [vocab]`
 /// runs fixed phrases through the cleaner (S1-mini by default), prints the results, and exits. Only these
 /// canned phrases are printed — never real dictations.
 enum CleanupSelfTest {
@@ -37,7 +37,7 @@ enum CleanupSelfTest {
         let cleaner = TextCleaner()
         let savedEngine = cleaner.engine
         let arguments = CommandLine.arguments
-        cleaner.engine = arguments.contains("claude") ? .claudeCode : arguments.contains("apple") ? .appleIntelligence : .s1Mini
+        cleaner.engine = arguments.contains("codex") ? .codex : arguments.contains("claude") ? .claudeCode : arguments.contains("apple") ? .appleIntelligence : .s1Mini
         defer { cleaner.engine = savedEngine }  // don't change the user's persisted choice
         if cleaner.engine == .s1Mini {
             // Wait for the download/load that setting the engine kicked off.
