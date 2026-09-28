@@ -11,7 +11,7 @@
   <meta property="og:url" content="https://heyvedu.com/">
   <title>HeyVedu — Private dictation for Mac</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=20260928-4">
+  <link rel="stylesheet" href="styles.css?v=20260928-5">
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -89,51 +89,54 @@
     </section>
 
     <section class="steps section shell" id="how">
-      <div class="section-heading center">
-        <p class="kicker">One shortcut. Any text field.</p>
-        <h2>Hold. Speak. Done.</h2>
-        <p>HeyVedu stays out of your way and does one focused job clearly.</p>
-      </div>
-      <div class="step-grid">
-        <article class="step-card">
-          <div class="step-visual keys-visual" aria-hidden="true"><span>⌃</span><span>⌥</span><i>hold</i></div>
-          <p class="number">01</p><h3>Hold Control + Option</h3>
-          <p>HeyVedu listens only while you hold the shortcut.</p>
-        </article>
-        <article class="step-card">
-          <div class="step-visual speak-visual" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <p class="number">02</p><h3>Speak naturally</h3>
-          <p>Pause, use filler words, or correct yourself mid-sentence.</p>
-        </article>
-        <article class="step-card">
-          <div class="step-visual type-visual" aria-hidden="true"><span>I want to book a meeting</span><i></i></div>
-          <p class="number">03</p><h3>Keep typing</h3>
-          <p>Clean text appears wherever your cursor is.</p>
-        </article>
+      <div class="how-compact">
+        <div class="how-copy">
+          <p class="kicker">One shortcut. Any text field.</p>
+          <h2>Hold. Speak.<br>Done.</h2>
+          <p>Natural speech becomes polished text right where your cursor is.</p>
+        </div>
+        <div class="how-rail" aria-label="Hold Control and Option, speak naturally, then keep typing">
+          <div class="how-step">
+            <div class="how-keys" aria-hidden="true"><kbd>⌃</kbd><kbd>⌥</kbd></div>
+            <strong>Hold</strong>
+            <small>Control + Option</small>
+          </div>
+          <span class="how-arrow" aria-hidden="true">→</span>
+          <div class="how-step">
+            <div class="how-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <strong>Speak naturally</strong>
+            <small>Pause. Correct yourself.</small>
+          </div>
+          <span class="how-arrow" aria-hidden="true">→</span>
+          <div class="how-step">
+            <div class="how-result" aria-hidden="true">Meeting at 3 PM.<i></i></div>
+            <strong>Keep typing</strong>
+            <small>Clean text, instantly.</small>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="privacy-section section" id="privacy">
-      <div class="shell">
-        <div class="privacy-intro">
-          <div>
-            <p class="kicker light">Privacy, by architecture</p>
-            <h2>Your voice stays<br>on your Mac.</h2>
+      <div class="privacy-compact shell">
+        <div class="privacy-copy">
+          <p class="kicker light">Privacy, by architecture</p>
+          <h2>It all happens<br><em>right here.</em></h2>
+          <p>Your recording, transcription, and cleanup stay inside your Mac.</p>
+          <div class="privacy-proofs" aria-label="No cloud, no history, works offline">
+            <span>No cloud</span><span>No history</span><span>Works offline</span>
           </div>
-          <p>HeyVedu’s default dictation path runs on your Mac. There is no HeyVedu cloud, account, or transcript archive.</p>
         </div>
-
-        <div class="pipeline-card">
-          <div class="pipeline" aria-label="Speak, transcribe and clean locally, then type into your active app">
-            <div class="pipe-node"><span class="node-icon">⌁</span><strong>Speak</strong><small>Audio held in memory</small></div>
-            <span class="pipe-arrow" aria-hidden="true">→</span>
-            <div class="pipe-node featured"><span class="node-icon">Aa</span><strong>Transcribe + clean</strong><small>Entirely on-device</small></div>
-            <span class="pipe-arrow" aria-hidden="true">→</span>
-            <div class="pipe-node"><span class="node-icon cursor-icon">▏</span><strong>Type</strong><small>Into your active app</small></div>
+        <div class="mac-frame">
+          <div class="mac-frame-top"><span>Your Mac</span><span><i></i> 100% local</span></div>
+          <div class="mac-flow" aria-label="Speak, clean on-device, then type into your active app">
+            <div class="mac-node"><span class="mac-icon">⌁</span><strong>Speak</strong><small>Audio in memory</small></div>
+            <span class="mac-arrow" aria-hidden="true">→</span>
+            <div class="mac-node"><span class="mac-icon filled">Aa</span><strong>Clean</strong><small>On-device</small></div>
+            <span class="mac-arrow" aria-hidden="true">→</span>
+            <div class="mac-node"><span class="mac-icon cursor-icon">▏</span><strong>Type</strong><small>Active app</small></div>
           </div>
-          <div class="proof-row">
-            <span>✓ No cloud · No history · Works offline</span>
-          </div>
+          <div class="mac-base" aria-hidden="true"></div>
         </div>
       </div>
     </section>
