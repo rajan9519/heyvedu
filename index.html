@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="HeyVedu is free, open-source, local-first push-to-talk dictation for Apple-silicon Macs.">
+  <meta name="theme-color" content="#f5f2ea">
+  <meta property="og:title" content="HeyVedu — Private dictation for Mac">
+  <meta property="og:description" content="Speak freely. Nothing leaves your Mac in the default workflow.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://heyvedu.com/">
+  <title>HeyVedu — Private dictation for Mac</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=20260928-4">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="nav shell" aria-label="Main navigation">
+      <a class="brand" href="#top" aria-label="HeyVedu home">
+        <svg class="brand-mark" viewBox="0 0 36 36" aria-hidden="true">
+          <rect x="1" y="1" width="34" height="34" rx="11" fill="#151515"/>
+          <path d="M9 19v-3m4 7V12m5 14V9m5 13V13m4 6v-4" stroke="#72D6A0" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M27 24v4l-3-2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>HeyVedu</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-links">
+        <span class="sr-only">Open menu</span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#requirements">Requirements</a>
+        <a href="https://github.com/rajan9519/heyvedu" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+        <a class="button button-small button-dark" href="https://github.com/rajan9519/heyvedu#install-from-source">Install from source</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero shell" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> Private dictation for Mac</p>
+        <h1>Speak freely.<br><em>Nothing leaves</em><br>your Mac.</h1>
+        <p class="hero-lede">Free, open-source dictation that turns natural speech into polished text anywhere on macOS—on your device, even when you’re offline.</p>
+        <div class="hero-actions">
+          <a class="button button-dark" href="https://github.com/rajan9519/heyvedu#install-from-source">Install free from GitHub <span aria-hidden="true">↗</span></a>
+          <a class="button button-quiet" href="#how">See how it works <span aria-hidden="true">↓</span></a>
+        </div>
+        <p class="trust-row" aria-label="Free forever, no account, no history, on-device">
+          <span>Free forever</span><span>No account</span><span>No history</span><span>On-device</span>
+        </p>
+      </div>
+
+      <div class="demo-wrap" aria-label="Animated demonstration of HeyVedu turning speech into clean text">
+        <div class="demo-titlebar">
+          <div class="traffic-lights" aria-hidden="true"><i></i><i></i><i></i></div>
+          <span>New Message</span>
+          <button class="demo-pause" type="button" aria-pressed="false"><span aria-hidden="true">Ⅱ</span><span class="pause-label">Pause demo</span></button>
+        </div>
+        <div class="message-window">
+          <div class="message-meta">
+            <span class="avatar" aria-hidden="true">A</span>
+            <div><b>Alex Morgan</b><small>To: Project team</small></div>
+          </div>
+          <div class="compose-field" aria-live="polite">
+            <span class="demo-text">I want to book a meeting for 3 PM.</span><span class="cursor" aria-hidden="true"></span>
+          </div>
+          <div class="compose-tools" aria-hidden="true"><span>⌁</span><span>▧</span><i></i><b>Send</b></div>
+        </div>
+        <div class="hud" aria-hidden="true">
+          <div class="hud-icon"><span class="mic-dot"></span></div>
+          <div class="waveform">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <span class="hud-status">Listening</span>
+        </div>
+        <div class="shortcut" aria-hidden="true">
+          <span class="key key-control"><small>control</small><b>⌃</b></span>
+          <span class="plus">+</span>
+          <span class="key key-option"><small>option</small><b>⌥</b></span>
+          <span class="shortcut-hint">hold to talk</span>
+        </div>
+        <span class="demo-caption"><i></i> Local processing</span>
+      </div>
+    </section>
+
+    <section class="steps section shell" id="how">
+      <div class="section-heading center">
+        <p class="kicker">One shortcut. Any text field.</p>
+        <h2>Hold. Speak. Done.</h2>
+        <p>HeyVedu stays out of your way and does one focused job clearly.</p>
+      </div>
+      <div class="step-grid">
+        <article class="step-card">
+          <div class="step-visual keys-visual" aria-hidden="true"><span>⌃</span><span>⌥</span><i>hold</i></div>
+          <p class="number">01</p><h3>Hold Control + Option</h3>
+          <p>HeyVedu listens only while you hold the shortcut.</p>
+        </article>
+        <article class="step-card">
+          <div class="step-visual speak-visual" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <p class="number">02</p><h3>Speak naturally</h3>
+          <p>Pause, use filler words, or correct yourself mid-sentence.</p>
+        </article>
+        <article class="step-card">
+          <div class="step-visual type-visual" aria-hidden="true"><span>I want to book a meeting</span><i></i></div>
+          <p class="number">03</p><h3>Keep typing</h3>
+          <p>Clean text appears wherever your cursor is.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="privacy-section section" id="privacy">
+      <div class="shell">
+        <div class="privacy-intro">
+          <div>
+            <p class="kicker light">Privacy, by architecture</p>
+            <h2>Your voice stays<br>on your Mac.</h2>
+          </div>
+          <p>HeyVedu’s default dictation path runs on your Mac. There is no HeyVedu cloud, account, or transcript archive.</p>
+        </div>
+
+        <div class="pipeline-card">
+          <div class="pipeline" aria-label="Speak, transcribe and clean locally, then type into your active app">
+            <div class="pipe-node"><span class="node-icon">⌁</span><strong>Speak</strong><small>Audio held in memory</small></div>
+            <span class="pipe-arrow" aria-hidden="true">→</span>
+            <div class="pipe-node featured"><span class="node-icon">Aa</span><strong>Transcribe + clean</strong><small>Entirely on-device</small></div>
+            <span class="pipe-arrow" aria-hidden="true">→</span>
+            <div class="pipe-node"><span class="node-icon cursor-icon">▏</span><strong>Type</strong><small>Into your active app</small></div>
+          </div>
+          <div class="proof-row">
+            <span>✓ No cloud · No history · Works offline</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="examples section shell" id="examples">
+      <div class="section-heading split-heading">
+        <div><p class="kicker">Clean, not rewritten</p><h2>Say it naturally.<br><em>Send it clearly.</em></h2></div>
+        <p>HeyVedu removes the verbal clutter while preserving what you meant, how you meant it.</p>
+      </div>
+      <div class="example-tabs" role="tablist" aria-label="Dictation cleanup examples">
+        <button role="tab" id="tab-correction" aria-controls="panel-correction" aria-selected="true" tabindex="0">Correction</button>
+        <button role="tab" id="tab-filler" aria-controls="panel-filler" aria-selected="false" tabindex="-1">Filler removal</button>
+        <button role="tab" id="tab-formatting" aria-controls="panel-formatting" aria-selected="false" tabindex="-1">Formatting</button>
+      </div>
+      <div class="example-panel" role="tabpanel" id="panel-correction" aria-labelledby="tab-correction">
+        <div class="speech-example"><span class="example-label">What you say</span><p>“Let’s meet <s>Friday</s>—actually, <mark>Monday afternoon</mark>.”</p><div class="mini-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <span class="transform-arrow" aria-hidden="true">→</span>
+        <div class="result-example"><span class="example-label">What gets typed</span><p>Let’s meet Monday afternoon.</p><span class="meaning-chip">Meaning preserved</span></div>
+      </div>
+      <div class="example-panel" role="tabpanel" id="panel-filler" aria-labelledby="tab-filler" hidden>
+        <div class="speech-example"><span class="example-label">What you say</span><p>“Hey, <s>um,</s> could you send me the, <s>uh,</s> revised proposal?”</p><div class="mini-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <span class="transform-arrow" aria-hidden="true">→</span>
+        <div class="result-example"><span class="example-label">What gets typed</span><p>Hey, could you send me the revised proposal?</p><span class="meaning-chip">Fillers removed</span></div>
+      </div>
+      <div class="example-panel" role="tabpanel" id="panel-formatting" aria-labelledby="tab-formatting" hidden>
+        <div class="speech-example"><span class="example-label">What you say</span><p>“Three things for tomorrow: finish the brief, email Sam, and book the room.”</p><div class="mini-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <span class="transform-arrow" aria-hidden="true">→</span>
+        <div class="result-example"><span class="example-label">What gets typed</span><ul><li>Finish the brief</li><li>Email Sam</li><li>Book the room</li></ul><span class="meaning-chip">Structure recognized</span></div>
+      </div>
+    </section>
+
+    <section class="principles section shell">
+      <div class="section-heading"><p class="kicker">Small app. Clear principles.</p><h2>Made to earn its place<br> in your menu bar.</h2></div>
+      <div class="principle-grid">
+        <article><span class="principle-icon green">⌂</span><h3>Local by default</h3><p>Speech recognition and standard cleanup happen on-device.</p></article>
+        <article><span class="principle-icon blue">◉</span><h3>Private by design</h3><p>No history, no audio files, and no HeyVedu account.</p></article>
+        <article><span class="principle-icon ink">⌘</span><h3>Free and open</h3><p>GPLv3 source that people can inspect, modify, and contribute to.</p></article>
+        <article><span class="principle-icon cream">▤</span><h3>Works where you work</h3><p>Messages, notes, email, editors, terminals, and most other text fields.</p></article>
+      </div>
+    </section>
+
+    <section class="opensource section" id="open-source">
+      <div class="shell open-grid">
+        <div class="open-copy">
+          <p class="kicker light">Open, all the way down</p>
+          <h2>Software you can<br> actually inspect.</h2>
+          <p>HeyVedu is GPLv3-licensed and built as a focused native macOS menu-bar utility. Its privacy model isn’t a promise hidden in a policy—it’s visible in the source.</p>
+          <div class="inline-links">
+            <a href="https://github.com/rajan9519/heyvedu">View source <span aria-hidden="true">↗</span></a>
+            <a href="https://github.com/rajan9519/heyvedu#privacy">Read the privacy model <span aria-hidden="true">↗</span></a>
+            <a href="https://github.com/rajan9519/heyvedu/issues">Report an issue <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <div class="code-card" aria-label="Excerpt from HeyVedu's text insertion source code">
+          <div class="code-top"><span>TextInserter.swift</span><span>GPL-3.0</span></div>
+          <pre><code><span class="code-muted">// Keep the clipboard exactly as we found it.</span>
+<span class="code-blue">let</span> saved = <span class="code-green">snapshot</span>(pasteboard)
+
+item.<span class="code-green">setString</span>(text, forType: .string)
+item.<span class="code-green">setData</span>(Data(), forType:
+  <span class="code-yellow">transientType</span>)
+
+<span class="code-green">postPaste</span>()
+<span class="code-muted">// Restore it after the text is inserted.</span></code></pre>
+          <div class="code-foot"><span><i></i> Native Swift</span><span>Inspect every line</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="requirements section shell" id="requirements">
+      <div class="requirements-grid">
+        <div class="requirements-copy">
+          <p class="kicker">Before you begin</p><h2>A Mac, Xcode,<br>and one command.</h2>
+          <p>HeyVedu is currently installed from source. There is no signed binary release yet—we’d rather say that plainly.</p>
+          <ul class="check-list">
+            <li><span>✓</span>Apple-silicon Mac</li>
+            <li><span>✓</span>macOS 26.4 or later</li>
+            <li><span>✓</span>Xcode with the macOS 26.4 SDK</li>
+            <li><span>✓</span>About 2.1 GB for local models, plus build data</li>
+            <li><span>✓</span>Internet for the initial build and first model downloads</li>
+            <li><span>✓</span>Microphone and Accessibility permissions</li>
+          </ul>
+        </div>
+        <div class="install-card">
+          <div class="terminal-top"><span></span><span></span><span></span><b>Terminal</b></div>
+          <div class="terminal-body"><span class="prompt">~</span> <code>./scripts/run.sh</code><button class="copy-command" type="button" data-copy="./scripts/run.sh" aria-label="Copy installation command">Copy</button></div>
+          <div class="install-steps"><p><span>1</span> Clone or download the repository</p><p><span>2</span> Run the command from the project folder</p><p><span>3</span> Grant Microphone and Accessibility access</p></div>
+          <a class="button button-blue" href="https://github.com/rajan9519/heyvedu#install-from-source">Read installation instructions <span aria-hidden="true">↗</span></a>
+          <p class="install-note">Source builds are ad-hoc signed, so macOS may ask for Accessibility access again after rebuilding.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq section shell" id="faq">
+      <div class="section-heading center"><p class="kicker">Good to know</p><h2>Questions, answered.</h2></div>
+      <div class="faq-list">
+        <details><summary>Is HeyVedu really free?<span></span></summary><p>Yes. HeyVedu is free and open source under the GNU GPLv3. There is no HeyVedu account or subscription.</p></details>
+        <details><summary>Does it work without internet?<span></span></summary><p>Yes, after the initial build and model downloads. The default speech recognition and cleanup pipeline runs entirely on your Mac. Optional Claude Code and Codex CLI cleanup modes require their corresponding online provider.</p></details>
+        <details><summary>Does my audio leave my Mac?<span></span></summary><p>No. Recorded audio stays in memory, is never written to disk, and is transcribed on-device—even if you choose an optional advanced cleanup engine.</p></details>
+        <details><summary>Does HeyVedu save a dictation history?<span></span></summary><p>No. HeyVedu does not store a dictation history. Debug builds log timing and errors, but not audio, transcripts, vocabulary, or typed keys.</p></details>
+        <details><summary>Why does it need Accessibility permission?<span></span></summary><p>Accessibility access lets HeyVedu observe the Control + Option push-to-talk shortcut and paste the finished text at your current cursor.</p></details>
+        <details><summary>Which Macs are supported?<span></span></summary><p>HeyVedu requires an Apple-silicon Mac running macOS 26.4 or later. Dictation is currently English-only.</p></details>
+        <details><summary>How do I install it?<span></span></summary><p>Clone or download the GitHub repository, then run <code>./scripts/run.sh</code>. You’ll need Xcode with the macOS 26.4 SDK. There is no signed binary release yet.</p></details>
+        <details><summary>What are advanced cleanup engines?<span></span></summary><p>They are optional cleanup modes that use your locally installed and authenticated Claude Code or Codex CLI. Transcript text and configured vocabulary may be sent to Anthropic or OpenAI through your existing account; audio stays local.</p></details>
+      </div>
+    </section>
+
+    <section class="final-cta section shell">
+      <div class="final-card">
+        <div class="orbit-mark" aria-hidden="true"><span></span><i></i><b></b></div>
+        <p class="kicker">Dictate on your terms</p>
+        <h2>Less typing.<br><em>More privacy.</em></h2>
+        <p>Turn your voice into polished text without turning it into someone else’s data.</p>
+        <div class="hero-actions centered">
+          <a class="button button-dark" href="https://github.com/rajan9519/heyvedu#install-from-source">Install from source <span aria-hidden="true">↗</span></a>
+          <a class="button button-quiet" href="https://github.com/rajan9519/heyvedu">View on GitHub <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell footer-top">
+      <a class="brand footer-brand" href="#top"><svg class="brand-mark" viewBox="0 0 36 36" aria-hidden="true"><rect x="1" y="1" width="34" height="34" rx="11" fill="#151515"/><path d="M9 19v-3m4 7V12m5 14V9m5 13V13m4 6v-4" stroke="#72D6A0" stroke-width="2.4" stroke-linecap="round"/><path d="M27 24v4l-3-2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>HeyVedu</span></a>
+      <nav aria-label="Footer navigation"><a href="https://github.com/rajan9519/heyvedu">GitHub</a><a href="https://github.com/rajan9519/heyvedu#readme">Documentation</a><a href="https://github.com/rajan9519/heyvedu/blob/main/LICENSE">License</a><a href="#privacy">Privacy</a><a href="#requirements">Requirements</a></nav>
+    </div>
+    <div class="shell footer-bottom"><p>Free and open source under GPLv3.</p><p>Made for Apple-silicon Macs.</p></div>
+  </footer>
+</body>
+</html>
