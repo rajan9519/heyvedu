@@ -123,10 +123,6 @@ final class DictationController {
         case .activated:
             pressActivated = true
             if status == .recording {
-                // Only now is this a real dictation: get the cleanup engine ready (for
-                // Claude Code this launches the process) while the user speaks.
-                cleaner.vocabulary = vocabulary.terms
-                cleaner.prepare()
                 hud.showRecording(notice: pressNotice, listening: audioLive)
             } else if let pressFailure {
                 hud.flash(pressFailure)
@@ -174,6 +170,14 @@ final class DictationController {
         if fellBack { pressNotice = "Selected mic unavailable — using default" }
 
         status = .recording
+        // Start cleanup preparation on the initial press so model/session setup overlaps
+        // the 250 ms commit delay as well as the time the user spends speaking. Defer it
+        // off the event-tap callback so launching a CLI cannot make the tap time out.
+        Task { [weak self] in
+            guard let self, self.status == .recording else { return }
+            self.cleaner.vocabulary = self.vocabulary.terms
+            self.cleaner.prepare()
+        }
         Task {
             do {
                 try await recorder.start(deviceID: deviceID)
