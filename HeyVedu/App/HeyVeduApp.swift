@@ -8,7 +8,17 @@ struct HeyVeduApp: App {
         MenuBarExtra {
             MenuContent(controller: appDelegate.controller)
         } label: {
-            Image(systemName: appDelegate.controller.menuBarSymbol)
+            if appDelegate.controller.menuBarSymbol == "mic" {
+                Image("BrandMark")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 18)
+                    .accessibilityLabel("HeyVedu")
+            } else {
+                Image(systemName: appDelegate.controller.menuBarSymbol)
+                    .accessibilityLabel("HeyVedu: \(appDelegate.controller.statusText)")
+            }
         }
 
         Window("Vocabulary", id: VocabularyWindow.id) {
