@@ -112,6 +112,7 @@ Click the menu-bar icon to configure the app.
 | Engine | Where it runs | Notes |
 | --- | --- | --- |
 | **S1-mini by Superwhisper** | On your Mac | Default; English-only; choose Casual, Semi-casual, Semi-formal, or Formal style. Does not use the vocabulary list. |
+| **Vedu Scribe** | On your Mac | HeyVedu's own cleanup model, a Qwen3.5-0.8B fine-tune ([model card](https://huggingface.co/heyvedu/vedu-scribe-0.8b)). English-only; downloads about 560 MB on first use. Does not use the vocabulary list. |
 | **Apple Intelligence** | On your Mac | Uses Apple's on-device Foundation Model. Falls back to the raw transcript if the model is unavailable. |
 
 Turn off **Clean Up Transcripts** to paste the raw, locally generated transcript.
@@ -237,8 +238,10 @@ runs Parakeet through Core ML for speech recognition. The selected cleanup
 engine normalizes the transcript, then the app temporarily uses the clipboard
 to paste the result into the frontmost application.
 
-Dependencies and model revisions are pinned in the project. S1-mini model files
-are also checked against pinned SHA-256 hashes before loading.
+Dependencies and model revisions are pinned in the project. S1-mini and Vedu
+Scribe files are also checked against pinned SHA-256 hashes before loading.
+When an app update pins a newer model revision, the app downloads it on next use
+and deletes the old one.
 
 ## Current limitations
 
@@ -250,10 +253,11 @@ are also checked against pinned SHA-256 hashes before loading.
   paste
 - Restoring the clipboard may not preserve lazily provided clipboard content
   from every application
-- S1-mini does not use custom vocabulary
+- S1-mini and Vedu Scribe do not use custom vocabulary
 
 ## License
 
 HeyVedu is licensed under the [GNU General Public License v3.0](LICENSE).
 Third-party packages and downloaded models retain their own licenses. S1-mini
-is provided by Superwhisper under its published model license.
+is provided by Superwhisper under its published model license. Vedu Scribe is
+released under Apache-2.0.

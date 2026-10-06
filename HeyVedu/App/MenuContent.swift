@@ -24,6 +24,7 @@ struct MenuContent: View {
             if isUsingLocalCleanup {
                 Picker("On-Device Cleanup", selection: cleanupEngine) {
                     Text(TextCleaner.Engine.s1Mini.title).tag(TextCleaner.Engine.s1Mini)
+                    Text(TextCleaner.Engine.dictationModel.title).tag(TextCleaner.Engine.dictationModel)
                     Text(TextCleaner.Engine.appleIntelligence.title).tag(TextCleaner.Engine.appleIntelligence)
                 }
             } else {
@@ -113,7 +114,7 @@ struct MenuContent: View {
     }
 
     private var isUsingLocalCleanup: Bool {
-        controller.cleaner.engine == .s1Mini || controller.cleaner.engine == .appleIntelligence
+        [.s1Mini, .dictationModel, .appleIntelligence].contains(controller.cleaner.engine)
     }
 
     private var cleanupEngine: Binding<TextCleaner.Engine> {

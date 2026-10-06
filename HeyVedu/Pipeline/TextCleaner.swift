@@ -5,8 +5,9 @@ import Observation
 import os
 
 /// Rewrites raw transcripts as the speaker intended: applies self-corrections, removes
-/// fillers, fixes grammar and punctuation. Three interchangeable engines:
+/// fillers, fixes grammar and punctuation. Interchangeable engines:
 /// - S1-mini by Superwhisper (default): a small on-device normalizer run with MLX.
+/// - Vedu Scribe: our own Qwen3.5-0.8B fine-tune, on-device with MLX (in testing).
 /// - Apple Intelligence: on-device Foundation Model (text never leaves the Mac).
 /// - Claude Code or Codex: locally installed CLIs (text is sent to their service).
 ///
@@ -17,6 +18,7 @@ import os
 final class TextCleaner {
     enum Engine: String, CaseIterable, Identifiable {
         case s1Mini
+        case dictationModel
         case appleIntelligence
         case claudeCode
         case codex
@@ -26,6 +28,7 @@ final class TextCleaner {
         var title: String {
             switch self {
             case .s1Mini: return "S1-mini by Superwhisper (on-device)"
+            case .dictationModel: return "Vedu Scribe (on-device)"
             case .appleIntelligence: return "Apple Intelligence (on-device)"
             case .claudeCode: return "Claude Code (sends text to Anthropic)"
             case .codex: return "Codex (sends text to OpenAI)"
@@ -77,11 +80,12 @@ final class TextCleaner {
     private(set) var availability: Availability = .unavailable("Checking…")
 
     var s1MiniState: S1MiniBackend.State { s1.state }
+    var dictationModelState: DictationModelBackend.State { dictationModel.state }
 
     var selectableEngines: [Engine] {
         Engine.allCases.filter {
             switch $0 {
-            case .s1Mini, .appleIntelligence: return true
+            case .s1Mini, .dictationModel, .appleIntelligence: return true
             case .claudeCode: return claude.availability() == .available
             case .codex: return codex.availability() == .available
             }
@@ -89,6 +93,7 @@ final class TextCleaner {
     }
 
     @ObservationIgnored private let s1 = S1MiniBackend()
+    @ObservationIgnored private let dictationModel = DictationModelBackend()
     @ObservationIgnored private let apple = AppleIntelligenceBackend()
     @ObservationIgnored private let claude = ClaudeCodeBackend()
     @ObservationIgnored private let codex = CodexBackend()
@@ -116,6 +121,7 @@ final class TextCleaner {
             defaults.set(engine.rawValue, forKey: Self.engineKey)
         }
         s1.onStateChange = { [weak self] in self?.refreshAvailability() }
+        dictationModel.onStateChange = { [weak self] in self?.refreshAvailability() }
         refreshAvailability()
     }
 
@@ -126,6 +132,8 @@ final class TextCleaner {
         switch engine {
         case .s1Mini:
             s1.prepare()
+        case .dictationModel:
+            dictationModel.prepare()
         case .claudeCode:
             refreshAvailability()
             guard availability == .available else { return }
@@ -141,6 +149,7 @@ final class TextCleaner {
     /// app quits.
     func shutdown() {
         s1.shutdown()
+        dictationModel.shutdown()
         claude.shutdown()
         apple.discardPrepared()
     }
@@ -155,6 +164,7 @@ final class TextCleaner {
     func refreshAvailability() {
         switch engine {
         case .s1Mini: availability = s1.availability()
+        case .dictationModel: availability = dictationModel.availability()
         case .appleIntelligence: availability = apple.availability()
         case .claudeCode: availability = claude.availability()
         case .codex: availability = codex.availability()
@@ -171,10 +181,14 @@ final class TextCleaner {
             s1.prepare()  // no-op once loaded; retries after a failed download
             return
         }
+        if engine == .dictationModel {
+            dictationModel.prepare()  // no-op once loaded; retries after a failure
+            return
+        }
         guard availability == .available else { return }
         let instructions = CleanupPrompt.instructions(vocabulary: vocabulary)
         switch engine {
-        case .s1Mini: break
+        case .s1Mini, .dictationModel: break
         case .appleIntelligence: apple.prepare(instructions: instructions)
         case .claudeCode: claude.prepare(model: claudeModel, instructions: instructions)
         case .codex: break
@@ -202,6 +216,10 @@ final class TextCleaner {
             chunks = await SentenceChunker.chunks(of: transcript, budget: S1MiniBackend.chunkTokenBudget) { [s1] in
                 await s1.tokenCount($0)
             }
+        case .dictationModel:
+            chunks = await SentenceChunker.chunks(of: transcript, budget: DictationModelBackend.chunkTokenBudget) { [dictationModel] in
+                await dictationModel.tokenCount($0)
+            }
         case .appleIntelligence: chunks = await apple.chunks(of: transcript, instructions: instructions)
         case .claudeCode, .codex: chunks = [transcript]
         }
@@ -217,6 +235,13 @@ final class TextCleaner {
                     // S1-mini can legitimately remove most of a transcript, expand
                     // contractions, or return nothing. Chat-model overlap heuristics
                     // reject these trained transformations (especially formal styling).
+                    if !cleaned.isEmpty { outputs.append(cleaned) }
+                    continue
+                case .dictationModel:
+                    cleaned = try await dictationModel.clean(chunk)
+                    // Trained to drop retracted text, apply spoken commands ("new line",
+                    // "bullet point") and return nothing for filler-only speech, which the
+                    // chat-model overlap heuristics would reject.
                     if !cleaned.isEmpty { outputs.append(cleaned) }
                     continue
                 case .appleIntelligence:
@@ -238,9 +263,10 @@ final class TextCleaner {
             }
         }
         let joined = outputs.filter { !$0.isEmpty }.joined(separator: " ")
-        // The S1-mini control line owns casing and punctuation, including lowercase
-        // sentence starts and omitted final periods in casual registers.
-        return Result(text: engine == .s1Mini ? joined : TextPolish.finalize(joined), fallbackReason: fallbackReason)
+        // The on-device normalizers own casing and punctuation: S1-mini's control line
+        // allows lowercase starts and no final period, and the fine-tune emits lists.
+        let ownsPunctuation = engine == .s1Mini || engine == .dictationModel
+        return Result(text: ownsPunctuation ? joined : TextPolish.finalize(joined), fallbackReason: fallbackReason)
     }
 }
 
