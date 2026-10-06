@@ -9,11 +9,7 @@ struct HeyVeduApp: App {
             MenuContent(controller: appDelegate.controller)
         } label: {
             if appDelegate.controller.menuBarSymbol == "mic" {
-                Image("BrandMark")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 22, height: 18)
+                Image(nsImage: Self.menuBarMark)
                     .accessibilityLabel("HeyVedu")
             } else {
                 Image(systemName: appDelegate.controller.menuBarSymbol)
@@ -27,6 +23,16 @@ struct HeyVeduApp: App {
         .windowResizability(.contentMinSize)
         .defaultLaunchBehavior(.suppressed)
     }
+
+    /// MenuBarExtra labels ignore `.resizable()`/`.frame()` and draw an image at its point
+    /// size, so the 128 px brand mark is sized to a menu bar glyph here (the extra pixels
+    /// keep it sharp on Retina). Template so it follows the menu bar's light/dark tint.
+    private static let menuBarMark: NSImage = {
+        let image = (NSImage(named: "BrandMark")?.copy() as? NSImage) ?? NSImage()
+        image.size = NSSize(width: 18, height: 18)
+        image.isTemplate = true
+        return image
+    }()
 }
 
 enum VocabularyWindow {
