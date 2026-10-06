@@ -117,10 +117,19 @@ notarize() {
   local artifact="$1" label="$2" result status submission submit_exit=0
   result="$work/$label-notary.plist"
   # Persist Apple's response even if submission fails, for diagnosis or resuming.
+  # On a timeout notarytool writes the plist to stderr instead of stdout.
   xcrun notarytool submit "$artifact" --keychain-profile "$NOTARY_PROFILE" \
-    --wait --timeout 30m --output-format plist > "$result" || submit_exit=$?
-  status="$(/usr/libexec/PlistBuddy -c 'Print :status' "$result" 2>/dev/null || true)"
-  submission="$(/usr/libexec/PlistBuddy -c 'Print :id' "$result" 2>/dev/null || true)"
+    --wait --timeout "${NOTARY_TIMEOUT:-2h}" --output-format plist \
+    > "$result" 2> "$result.stderr" || submit_exit=$?
+  [[ -s "$result" ]] || cp "$result.stderr" "$result"
+  # PlistBuddy prints errors to stdout, so discard its output when it fails.
+  status="$(/usr/libexec/PlistBuddy -c 'Print :status' "$result" 2>/dev/null)" || status=
+  submission="$(/usr/libexec/PlistBuddy -c 'Print :id' "$result" 2>/dev/null)" || submission=
+  if [[ "$status" != Accepted && -n "$submission" && "$submit_exit" -ne 0 ]]; then
+    fail "Notarization of $label did not finish in time (submission $submission). Check it with:
+  xcrun notarytool wait $submission --keychain-profile $NOTARY_PROFILE
+then rerun this script once Apple has accepted it; later submissions are usually faster."
+  fi
   if [[ "$status" != Accepted ]]; then
     if [[ -n "$submission" ]]; then
       xcrun notarytool log "$submission" --keychain-profile "$NOTARY_PROFILE" \
