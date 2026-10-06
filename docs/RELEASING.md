@@ -140,6 +140,30 @@ location = /updates/appcast.xml {
 }
 ```
 
+## Website download link
+
+The website's download buttons point to `https://app.heyvedu.com/download`, a Cloudflare
+Worker ([deploy/download-worker.js](../deploy/download-worker.js)) that reads
+`updates/appcast.xml` from the R2 bucket and redirects to the DMG it names. Uploading a
+new appcast therefore updates the link; nothing else changes per release.
+
+One-time setup in the Cloudflare dashboard:
+
+1. **Workers & Pages → Create → Create Worker** (Start with Hello World). Name it
+   `heyvedu-download` and select **Deploy**.
+2. Select **Edit code**, replace the contents with `deploy/download-worker.js`, and select
+   **Deploy**.
+3. In the Worker, open **Settings → Bindings → Add → R2 bucket**. Set the variable name to
+   `BUCKET` and the bucket to `heyvedu`, then **Deploy**.
+4. Open **Settings → Domains & Routes → Add → Route**. Choose the `heyvedu.com` zone, enter
+   the route `app.heyvedu.com/download`, and save. Other `app.heyvedu.com` paths stay
+   served directly from R2.
+5. Optionally, disable the `workers.dev` URL on the same page; the route is all that's needed.
+
+Check it: `curl -sI https://app.heyvedu.com/download` returns `302` with a `location` of the
+latest DMG. If the appcast is missing or unreadable, it redirects to the website instead.
+To change the Worker later, paste the updated file into **Edit code** again.
+
 How the app updates:
 
 - It checks the feed about once a day, plus whenever the user chooses **Check for

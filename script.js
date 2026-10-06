@@ -40,17 +40,6 @@ function activateTab(activeTab) {
   });
 }
 
-const copyButton = document.querySelector('.copy-command');
-copyButton?.addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText(copyButton.dataset.copy);
-    copyButton.textContent = 'Copied';
-    setTimeout(() => { copyButton.textContent = 'Copy'; }, 1600);
-  } catch {
-    copyButton.textContent = 'Select command';
-  }
-});
-
 const demo = document.querySelector('.demo-wrap');
 const pauseButton = document.querySelector('.demo-pause');
 const demoText = document.querySelector('.demo-text');

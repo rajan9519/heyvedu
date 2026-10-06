@@ -40,10 +40,15 @@ Apple Intelligence cleanup additionally requires a supported Mac with Apple
 Intelligence enabled and its model downloaded. Vedu Scribe does not require
 Apple Intelligence.
 
+## Download
+
+Download the latest signed and notarized release from
+[app.heyvedu.com/download](https://app.heyvedu.com/download), open the disk image, and
+drag HeyVedu to Applications. The app checks for updates and installs them itself.
+
 ## Install from source
 
-There is currently no signed binary release. Clone or download this repository,
-then run:
+Clone or download this repository, then run:
 
 ```bash
 ./scripts/run.sh

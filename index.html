@@ -33,7 +33,7 @@
         <a href="#privacy">Privacy</a>
         <a href="#requirements">Requirements</a>
         <a href="https://github.com/rajan9519/heyvedu" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
-        <a class="button button-small button-dark" href="https://github.com/rajan9519/heyvedu#install-from-source">Install from source</a>
+        <a class="button button-small button-dark" href="https://app.heyvedu.com/download">Download for Mac</a>
       </div>
     </nav>
   </header>
@@ -45,7 +45,7 @@
         <h1>Speak freely.<br><em>Nothing leaves</em><br>your Mac.</h1>
         <p class="hero-lede">Free, open-source dictation that turns natural speech into polished text anywhere on macOS, on your device, even when you’re offline.</p>
         <div class="hero-actions">
-          <a class="button button-dark" href="https://github.com/rajan9519/heyvedu#install-from-source">Install free from GitHub <span aria-hidden="true">↗</span></a>
+          <a class="button button-dark" href="https://app.heyvedu.com/download">Download free for Mac <span aria-hidden="true">↓</span></a>
           <a class="button button-quiet" href="#how">See how it works <span aria-hidden="true">↓</span></a>
         </div>
         <p class="trust-row" aria-label="Free forever, no account, no history, on-device">
@@ -207,23 +207,21 @@ item.<span class="code-green">setData</span>(Data(), forType:
     <section class="requirements section shell" id="requirements">
       <div class="requirements-grid">
         <div class="requirements-copy">
-          <p class="kicker">Before you begin</p><h2>A Mac, Xcode,<br>and one command.</h2>
-          <p>HeyVedu is currently installed from source. There is no signed binary release yet. We’d rather say that plainly.</p>
+          <p class="kicker">Before you begin</p><h2>A Mac,<br>and a minute.</h2>
+          <p>HeyVedu is a signed and notarized Mac app that updates itself. You can still build it from source if you prefer.</p>
           <ul class="check-list">
             <li><span>✓</span>Apple-silicon Mac</li>
             <li><span>✓</span>macOS 26.4 or later</li>
-            <li><span>✓</span>Xcode with the macOS 26.4 SDK</li>
-            <li><span>✓</span>About 2.1 GB for local models, plus build data</li>
-            <li><span>✓</span>Internet for the initial build and first model downloads</li>
+            <li><span>✓</span>About 2.1 GB for local models</li>
+            <li><span>✓</span>Internet for the first model downloads</li>
             <li><span>✓</span>Microphone and Accessibility permissions</li>
           </ul>
         </div>
         <div class="install-card">
-          <div class="terminal-top"><span></span><span></span><span></span><b>Terminal</b></div>
-          <div class="terminal-body"><span class="prompt">~</span> <code>./scripts/run.sh</code><button class="copy-command" type="button" data-copy="./scripts/run.sh" aria-label="Copy installation command">Copy</button></div>
-          <div class="install-steps"><p><span>1</span> Clone or download the repository</p><p><span>2</span> Run the command from the project folder</p><p><span>3</span> Grant Microphone and Accessibility access</p></div>
-          <a class="button button-blue" href="https://github.com/rajan9519/heyvedu#install-from-source">Read installation instructions <span aria-hidden="true">↗</span></a>
-          <p class="install-note">Source builds are ad-hoc signed, so macOS may ask for Accessibility access again after rebuilding.</p>
+          <div class="terminal-top"><span></span><span></span><span></span><b>Install</b></div>
+          <div class="install-steps"><p><span>1</span> Download and open the disk image</p><p><span>2</span> Drag HeyVedu to Applications</p><p><span>3</span> Grant Microphone and Accessibility access</p></div>
+          <a class="button button-blue" href="https://app.heyvedu.com/download">Download for Mac <span aria-hidden="true">↓</span></a>
+          <p class="install-note">Prefer to build it yourself? <a href="https://github.com/rajan9519/heyvedu#install-from-source">Install from source</a>.</p>
         </div>
       </div>
     </section>
@@ -232,12 +230,12 @@ item.<span class="code-green">setData</span>(Data(), forType:
       <div class="section-heading center"><p class="kicker">Good to know</p><h2>Questions, answered.</h2></div>
       <div class="faq-list">
         <details><summary>Is HeyVedu really free?<span></span></summary><p>Yes. HeyVedu is free and open source under the GNU GPLv3. There is no HeyVedu account or subscription.</p></details>
-        <details><summary>Does it work without internet?<span></span></summary><p>Yes, after the initial build and model downloads. Speech recognition and cleanup run entirely on your Mac.</p></details>
+        <details><summary>Does it work without internet?<span></span></summary><p>Yes, after the first model downloads. Speech recognition and cleanup run entirely on your Mac.</p></details>
         <details><summary>Does my audio leave my Mac?<span></span></summary><p>No. Recorded audio stays in memory, is never written to disk, and is transcribed on-device.</p></details>
         <details><summary>Does HeyVedu save a dictation history?<span></span></summary><p>No. HeyVedu does not store a dictation history. Debug builds log timing and errors, but not audio, transcripts, vocabulary, or typed keys.</p></details>
         <details><summary>Why does it need Accessibility permission?<span></span></summary><p>Accessibility access lets HeyVedu observe the Control + Option push-to-talk shortcut and paste the finished text at your current cursor.</p></details>
         <details><summary>Which Macs are supported?<span></span></summary><p>HeyVedu requires an Apple-silicon Mac running macOS 26.4 or later. Dictation is currently English-only.</p></details>
-        <details><summary>How do I install it?<span></span></summary><p>Clone or download the GitHub repository, then run <code>./scripts/run.sh</code>. You’ll need Xcode with the macOS 26.4 SDK. There is no signed binary release yet.</p></details>
+        <details><summary>How do I install it?<span></span></summary><p><a href="https://app.heyvedu.com/download">Download the disk image</a>, open it, and drag HeyVedu to Applications. The app is signed and notarized by Apple and updates itself. You can also <a href="https://github.com/rajan9519/heyvedu#install-from-source">build it from source</a> with Xcode.</p></details>
       </div>
     </section>
 
@@ -264,7 +262,7 @@ item.<span class="code-green">setData</span>(Data(), forType:
         <h2>Less typing.<br><em>More privacy.</em></h2>
         <p>Turn your voice into polished text without turning it into someone else’s data.</p>
         <div class="hero-actions centered">
-          <a class="button button-dark" href="https://github.com/rajan9519/heyvedu#install-from-source">Install from source <span aria-hidden="true">↗</span></a>
+          <a class="button button-dark" href="https://app.heyvedu.com/download">Download for Mac <span aria-hidden="true">↓</span></a>
           <a class="button button-quiet" href="https://github.com/rajan9519/heyvedu">View on GitHub <span aria-hidden="true">↗</span></a>
         </div>
       </div>
