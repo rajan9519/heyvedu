@@ -38,9 +38,6 @@ Edit the ignored `Config/release.env`:
 DEVELOPMENT_TEAM="YOUR_TEAM_ID"
 SIGNING_IDENTITY="Developer ID Application: YOUR_NAME (YOUR_TEAM_ID)"
 NOTARY_PROFILE="heyvedu-notary"
-# Optional: otherwise the project supplies 0.1.0 and build 1.
-# MARKETING_VERSION="0.1.0"
-# CURRENT_PROJECT_VERSION="1"
 ```
 
 The Team ID is the 10-character identifier in your Apple Developer membership.
@@ -110,13 +107,18 @@ The script:
 
 The app and DMG are submitted separately so both carry their own stapled tickets.
 This lets the copied app retain its ticket even after leaving the disk image.
-Only distribute the final DMG after the script succeeds. Rebuilding the same
-version replaces that version's output; increment the version/build for releases.
+Only distribute the final DMG after the script succeeds.
 
-**Increase the build number for every release** (`CURRENT_PROJECT_VERSION`, in the
-project or `Config/release.env`). Sparkle compares build numbers, not the marketing
-version, and the script refuses a build number that isn't greater than the one in the
-existing `dist/updates/appcast.xml`.
+**Versions are chosen automatically** as `YY.MM.DDNN`: the build date (local time) and
+that day's build count, e.g. `26.10.0601` for the first release on 6 October 2026. Day and
+count share the last part so the version has the three parts Apple allows; `DDNN` compares
+as one number, so later days and later builds of a day always sort higher. The
+script fetches the published appcast (`SUFeedURL`) and also reads `dist/updates/appcast.xml`
+(built but not uploaded yet), takes the later of the two, and then picks the next number:
+`NN` goes up by one for another build on the same day and resets to `01` on a new day. The
+same string is used for both the marketing version and the build number Sparkle compares. A
+signed release stops if the feed can't be fetched (a 404 counts as "nothing published yet"),
+so it never reuses a number. Unsigned test builds fall back to `01`.
 
 ## Publish the update
 

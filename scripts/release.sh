@@ -64,9 +64,56 @@ mkdir -p build/release dist
 work="$(mktemp -d "$PWD/build/release/run.XXXXXX")"
 echo "Build logs and intermediate artifacts: $work"
 
-settings=(ENABLE_HARDENED_RUNTIME=YES)
-[[ -z "${MARKETING_VERSION:-}" ]] || settings+=("MARKETING_VERSION=$MARKETING_VERSION")
-[[ -z "${CURRENT_PROJECT_VERSION:-}" ]] || settings+=("CURRENT_PROJECT_VERSION=$CURRENT_PROJECT_VERSION")
+# Versions are YY.MM.DDNN: the release date plus that day's build count (NN), in the three
+# parts Apple allows, used as both the display version and Sparkle's build number. Because
+# DDNN compares as one number, later days and later builds of a day always sort higher. NN continues from the latest release in the
+# published appcast or in dist/updates (built but not yet uploaded), and restarts at 01 each day.
+appcast=dist/updates/appcast.xml
+feed_version() { sed -n 's:.*<sparkle\:version>\(.*\)</sparkle\:version>.*:\1:p' | head -1; }
+# Compares dotted versions numerically, part by part, as Sparkle does. Leading zeros are ignored.
+version_gt() {
+  local IFS=. i a b
+  read -ra a <<< "$1"
+  read -ra b <<< "$2"
+  for ((i = 0; i < ${#a[@]} || i < ${#b[@]}; i++)); do
+    (( 10#${a[i]:-0} > 10#${b[i]:-0} )) && return 0
+    (( 10#${a[i]:-0} < 10#${b[i]:-0} )) && return 1
+  done
+  return 1
+}
+feed_url="$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' Config/Info.plist)"
+http_status="$(curl -sSL --max-time 30 -o "$work/remote-appcast.xml" -w '%{http_code}' "$feed_url")" \
+  || http_status=000
+case "$http_status" in
+  200) previous="$(feed_version < "$work/remote-appcast.xml")" ;;
+  404) previous= ;;
+  *)
+    $unsigned || fail "Could not fetch $feed_url (HTTP $http_status) to choose the next version."
+    echo "Warning: could not fetch $feed_url (HTTP $http_status); numbering this test build from 01." >&2
+    previous= ;;
+esac
+if [[ -f "$appcast" ]]; then
+  local_previous="$(feed_version < "$appcast")"
+  if [[ -n "$local_previous" ]] && { [[ -z "$previous" ]] || version_gt "$local_previous" "$previous"; }; then
+    previous="$local_previous"
+  fi
+fi
+today="$(date '+%y.%m.%d')"
+nn=01
+if [[ "$previous" =~ ^([0-9]{2}\.[0-9]{2})\.([0-9]{2})([0-9]{2})$ ]]; then
+  previous_date="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+  version_gt "$previous_date" "$today" \
+    && fail "The last release ($previous) is dated after today ($today); check the system clock."
+  if [[ "$previous_date" == "$today" ]]; then
+    (( 10#${BASH_REMATCH[3]} < 99 )) || fail "Already released 99 builds today ($previous)."
+    nn="$(printf '%02d' $(( 10#${BASH_REMATCH[3]} + 1 )))"
+  fi
+fi
+version="${today%.*}.${today##*.}$nn"
+build="$version"
+echo "Version: $version (previous release: ${previous:-none})"
+
+settings=(ENABLE_HARDENED_RUNTIME=YES MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$build")
 # Xcode signs embedded code during the build; the distribution signature is applied
 # below in dependency order, with a secure timestamp and hardened runtime.
 xcodebuild \
@@ -80,15 +127,14 @@ xcodebuild \
 
 app="$work/DerivedData/Build/Products/Release/HeyVedu.app"
 [[ -d "$app" ]] || fail "Xcode did not produce $app"
-version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
-[[ "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]] || fail "Version must contain only numbers and dots."
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")" == "$version" &&
+   "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")" == "$build" ]] \
+  || fail "The built app's Info.plist does not carry version $version."
 xcrun lipo "$app/Contents/MacOS/HeyVedu" -verify_arch arm64
-build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")"
 
 # Sparkle installs updates only when the build number grows and the EdDSA signature
 # verifies against the key the installed app was built with, so check both up front.
 sparkle_bin="$PWD/build/SourcePackages/artifacts/sparkle/Sparkle/bin"
-appcast=dist/updates/appcast.xml
 if ! $unsigned; then
   [[ -x "$sparkle_bin/sign_update" ]] || fail "Sparkle's tools are missing from $sparkle_bin"
   app_key="$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$app/Contents/Info.plist")"
@@ -99,13 +145,8 @@ then put the printed public key in SUPublicEDKey in Config/Info.plist and commit
   [[ "$app_key" == "$keychain_key" ]] \
     || fail "SUPublicEDKey in Config/Info.plist does not match the Keychain's Sparkle key ($keychain_key).
 Never change the key after shipping: installed apps reject updates signed with another key."
-  if [[ -f "$appcast" ]]; then
-    previous="$(sed -n 's:.*<sparkle\:version>\(.*\)</sparkle\:version>.*:\1:p' "$appcast" | head -1)"
-    if [[ -n "$previous" ]] && \
-      [[ "$(printf '%s\n%s\n' "$previous" "$build" | sort -V | tail -1)" == "$previous" ]]; then
-      fail "Build number $build must be greater than the last release's ($previous); set CURRENT_PROJECT_VERSION."
-    fi
-  fi
+  [[ -z "$previous" ]] || version_gt "$build" "$previous" \
+    || fail "Build number $build must be greater than the last release's ($previous)."
 fi
 
 if $unsigned; then
@@ -250,7 +291,6 @@ echo "Created: $PWD/dist/$name"
 if ! $unsigned; then
   # Sparkle's appcast lists only this release; installed apps compare its build number with
   # theirs and download the DMG next to it. Upload the DMG before the appcast.
-  feed_url="$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$app/Contents/Info.plist")"
   min_os="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist")"
   enclosure="$("$sparkle_bin/sign_update" "dist/$name")"
   [[ "$enclosure" == *'sparkle:edSignature="'*'length="'* ]] || fail "sign_update failed: $enclosure"
