@@ -3,3 +3,5 @@ build/
 DerivedData/
 xcuserdata/
 *.xcuserstate
+dist/
+Config/release.env

@@ -67,6 +67,29 @@ You can also open `HeyVedu.xcodeproj` in Xcode, select the
 **HeyVedu** scheme, and run it. Xcode may ask you to trust the pinned MLX
 build-tool plugin; review the prompt and choose **Trust & Enable** to continue.
 
+## Build a DMG release
+
+The release script builds an **Apple silicon (arm64)** DMG for macOS 26.4 or
+later, signs the app and disk image with Developer ID, and notarizes and staples
+both. Intel Macs are not supported.
+
+```bash
+cp Config/release.env.example Config/release.env
+# Fill in your Developer ID identity and Team ID, and store notarization
+# credentials in Keychain as described in docs/RELEASING.md.
+./scripts/release.sh
+```
+
+For a local packaging test without Apple credentials:
+
+```bash
+./scripts/release.sh --unsigned
+```
+
+Outputs go to `dist/`. The unsigned test image is clearly labeled and is not
+ready for public distribution. See [Releasing](docs/RELEASING.md) for complete
+signing, Apple ID setup, notarization, and installation verification steps.
+
 ## First launch
 
 HeyVedu is a menu-bar app, so it does not appear in the Dock. Look for
@@ -247,7 +270,7 @@ and deletes the old one.
 
 - English dictation only
 - Apple silicon only
-- Source build; no notarized installer yet
+- Signed releases require a Developer ID certificate and notarization credentials
 - The global hotkey is fixed to **Control + Option**
 - Text insertion relies on **Command + V** and may not work in fields that block
   paste
