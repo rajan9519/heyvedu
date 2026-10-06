@@ -6,7 +6,7 @@ struct HeyVeduApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(controller: appDelegate.controller)
+            MenuContent(controller: appDelegate.controller, updates: appDelegate.updates)
         } label: {
             if appDelegate.controller.menuBarSymbol == "mic" {
                 Image(nsImage: Self.menuBarMark)
@@ -41,6 +41,7 @@ enum VocabularyWindow {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let controller = DictationController()
+    let updates = UpdateController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         #if DEBUG
@@ -53,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         #endif
         controller.start()
+        updates.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

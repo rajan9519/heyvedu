@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuContent: View {
     let controller: DictationController
+    let updates: UpdateController
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -55,6 +56,16 @@ struct MenuContent: View {
 
         Divider()
 
+        if updates.isAvailable {
+            switch updates.state {
+            case .idle:
+                Button(updates.menuTitle) { updates.checkForUpdates() }
+            case .readyToInstall:
+                Button(updates.menuTitle) { updates.installAndRelaunch() }
+            case .checking, .downloading:
+                Text(updates.menuTitle)
+            }
+        }
         Button("Quit HeyVedu") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }

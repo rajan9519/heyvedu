@@ -12,6 +12,7 @@ Default: sign and notarize the app and DMG using Config/release.env.
 --unsigned: create an ad-hoc signed DMG for local testing, without credentials.
 --config: source a trusted shell configuration file instead of Config/release.env.
 Outputs: dist/HeyVedu-VERSION-arm64[-UNSIGNED].dmg and its SHA-256 checksum.
+Signed releases also write dist/updates/ (appcast.xml and the DMG) for the update server.
 EOF
 }
 
@@ -82,6 +83,30 @@ app="$work/DerivedData/Build/Products/Release/HeyVedu.app"
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
 [[ "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]] || fail "Version must contain only numbers and dots."
 xcrun lipo "$app/Contents/MacOS/HeyVedu" -verify_arch arm64
+build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")"
+
+# Sparkle installs updates only when the build number grows and the EdDSA signature
+# verifies against the key the installed app was built with, so check both up front.
+sparkle_bin="$PWD/build/SourcePackages/artifacts/sparkle/Sparkle/bin"
+appcast=dist/updates/appcast.xml
+if ! $unsigned; then
+  [[ -x "$sparkle_bin/sign_update" ]] || fail "Sparkle's tools are missing from $sparkle_bin"
+  app_key="$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$app/Contents/Info.plist")"
+  keychain_key="$("$sparkle_bin/generate_keys" -p 2>/dev/null)" \
+    || fail "No Sparkle signing key in your Keychain. Run once (and back up the key with -x):
+  $sparkle_bin/generate_keys
+then put the printed public key in SUPublicEDKey in Config/Info.plist and commit it."
+  [[ "$app_key" == "$keychain_key" ]] \
+    || fail "SUPublicEDKey in Config/Info.plist does not match the Keychain's Sparkle key ($keychain_key).
+Never change the key after shipping: installed apps reject updates signed with another key."
+  if [[ -f "$appcast" ]]; then
+    previous="$(sed -n 's:.*<sparkle\:version>\(.*\)</sparkle\:version>.*:\1:p' "$appcast" | head -1)"
+    if [[ -n "$previous" ]] && \
+      [[ "$(printf '%s\n%s\n' "$previous" "$build" | sort -V | tail -1)" == "$previous" ]]; then
+      fail "Build number $build must be greater than the last release's ($previous); set CURRENT_PROJECT_VERSION."
+    fi
+  fi
+fi
 
 if $unsigned; then
   suffix=-UNSIGNED
@@ -184,6 +209,41 @@ fi
 mv -f "$dmg" "dist/$name"
 (cd dist && shasum -a 256 "$name" > "$name.sha256")
 echo "Created: $PWD/dist/$name"
+
+if ! $unsigned; then
+  # Sparkle's appcast lists only this release; installed apps compare its build number with
+  # theirs and download the DMG next to it. Upload the DMG before the appcast.
+  feed_url="$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$app/Contents/Info.plist")"
+  min_os="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist")"
+  enclosure="$("$sparkle_bin/sign_update" "dist/$name")"
+  [[ "$enclosure" == *'sparkle:edSignature="'*'length="'* ]] || fail "sign_update failed: $enclosure"
+  cat > "$work/appcast.xml" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>HeyVedu</title>
+    <link>$feed_url</link>
+    <item>
+      <title>HeyVedu $version</title>
+      <pubDate>$(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S +0000')</pubDate>
+      <sparkle:version>$build</sparkle:version>
+      <sparkle:shortVersionString>$version</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>$min_os</sparkle:minimumSystemVersion>
+      <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+      <enclosure url="${feed_url%/*}/$name" type="application/x-apple-diskimage" $enclosure/>
+    </item>
+  </channel>
+</rss>
+EOF
+  # Embeds the feed's EdDSA signature; the app requires it (SURequireSignedFeed).
+  "$sparkle_bin/sign_update" "$work/appcast.xml" >/dev/null
+  "$sparkle_bin/sign_update" --verify "$work/appcast.xml" >/dev/null
+  rm -rf dist/updates
+  mkdir -p dist/updates
+  cp "dist/$name" "dist/updates/$name"
+  mv "$work/appcast.xml" "$appcast"
+  echo "Update feed: $PWD/dist/updates (upload $name first, then appcast.xml, to ${feed_url%/*}/)"
+fi
 if $unsigned; then
   echo "Local test build only: ad-hoc signed, not notarized, and not ready for public distribution."
 else

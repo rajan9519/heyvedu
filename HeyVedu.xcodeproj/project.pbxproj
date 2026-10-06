@@ -12,11 +12,13 @@
 		1D000000000000000000001B /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 1D000000000000000000001A /* MLXLMCommon */; };
 		1D000000000000000000001D /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 1D000000000000000000001C /* MLX */; };
 		1D000000000000000000001F /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 1D000000000000000000001E /* Tokenizers */; };
+		1D0000000000000000000022 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1D0000000000000000000021 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1D0000000000000000000004 /* HeyVedu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeyVedu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D0000000000000000000011 /* HeyVedu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HeyVedu.entitlements; sourceTree = "<group>"; };
+		1D0000000000000000000023 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -37,6 +39,7 @@
 				1D000000000000000000001B /* MLXLMCommon in Frameworks */,
 				1D000000000000000000001D /* MLX in Frameworks */,
 				1D000000000000000000001F /* Tokenizers in Frameworks */,
+				1D0000000000000000000022 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				1D0000000000000000000011 /* HeyVedu.entitlements */,
+				1D0000000000000000000023 /* Info.plist */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -93,6 +97,7 @@
 				1D000000000000000000001A /* MLXLMCommon */,
 				1D000000000000000000001C /* MLX */,
 				1D000000000000000000001E /* Tokenizers */,
+				1D0000000000000000000021 /* Sparkle */,
 			);
 			productName = HeyVedu;
 			productReference = 1D0000000000000000000004 /* HeyVedu.app */;
@@ -127,6 +132,7 @@
 				1D0000000000000000000015 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 				1D0000000000000000000016 /* XCRemoteSwiftPackageReference "mlx-swift" */,
 				1D0000000000000000000017 /* XCRemoteSwiftPackageReference "swift-transformers" */,
+				1D0000000000000000000020 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1D0000000000000000000003 /* Products */;
@@ -215,6 +221,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HeyVedu;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -246,6 +253,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HeyVedu;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -320,6 +328,14 @@
 				version = 1.3.4;
 			};
 		};
+		1D0000000000000000000020 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.10.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -347,6 +363,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1D0000000000000000000017 /* XCRemoteSwiftPackageReference "swift-transformers" */;
 			productName = Tokenizers;
+		};
+		1D0000000000000000000021 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1D0000000000000000000020 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

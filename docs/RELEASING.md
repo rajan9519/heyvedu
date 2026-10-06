@@ -64,6 +64,23 @@ the credentials in Keychain; the release script uses only the profile name.
 Use the same name as `NOTARY_PROFILE` in your config. Your Apple ID and password
 do not need to be added to source files.
 
+## Create the update signing key once
+
+HeyVedu updates itself with [Sparkle](https://sparkle-project.org). Every update and the
+update feed are signed with an EdDSA key; installed apps accept only updates signed with
+the key whose public half they were built with. After the first build has fetched the
+Swift packages (`./scripts/run.sh` or `./scripts/release.sh --unsigned`), run:
+
+```bash
+build/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_keys
+```
+
+This stores the private key in your login Keychain and prints the public key. Paste it
+into `SUPublicEDKey` in `Config/Info.plist` and commit that. Back up the private key
+(`generate_keys -x sparkle-private-key.txt`) somewhere safe and never commit it: if it is
+lost, installed copies can no longer be updated and users must download a new DMG by hand.
+`release.sh` refuses to build when the Keychain key and `Config/Info.plist` disagree.
+
 ## Build a public release
 
 ```bash
@@ -87,11 +104,47 @@ The script:
    `stapler` and Gatekeeper.
 7. Moves the finished image to `dist/HeyVedu-VERSION-arm64.dmg` and writes
    `dist/HeyVedu-VERSION-arm64.dmg.sha256`.
+8. Writes the update feed to `dist/updates/`: `appcast.xml`, signed with the Sparkle key,
+   and a copy of the DMG it points to.
 
 The app and DMG are submitted separately so both carry their own stapled tickets.
 This lets the copied app retain its ticket even after leaving the disk image.
 Only distribute the final DMG after the script succeeds. Rebuilding the same
 version replaces that version's output; increment the version/build for releases.
+
+**Increase the build number for every release** (`CURRENT_PROJECT_VERSION`, in the
+project or `Config/release.env`). Sparkle compares build numbers, not the marketing
+version, and the script refuses a build number that isn't greater than the one in the
+existing `dist/updates/appcast.xml`.
+
+## Publish the update
+
+Installed apps read `https://app.heyvedu.com/updates/appcast.xml` (`SUFeedURL` in
+`Config/Info.plist`) and download the DMG from the same folder. Upload the contents of
+`dist/updates/` there, **the DMG first and `appcast.xml` last**, so no app sees the
+feed before its download exists:
+
+```bash
+rsync -av dist/updates/HeyVedu-*.dmg SERVER:/var/www/app.heyvedu.com/updates/
+rsync -av dist/updates/appcast.xml SERVER:/var/www/app.heyvedu.com/updates/
+```
+
+Keep the feed from being cached for long, for example in the `app.heyvedu.com` nginx server:
+
+```nginx
+location = /updates/appcast.xml {
+    add_header Cache-Control "no-cache";
+}
+```
+
+How the app updates:
+
+- It checks the feed about once a day, plus whenever the user chooses **Check for
+  Updates…** in the menu bar menu.
+- A newer build downloads silently in the background. The menu then offers **Restart to
+  Update to HeyVedu VERSION**. If the user ignores it, the update installs when HeyVedu
+  quits, so the next launch runs the new version.
+- Debug builds and `--unsigned` builds never update themselves.
 
 Build logs, notarization responses, the app, and Xcode's dSYM files remain under
 `build/release/run.XXXXXX/`. Keep the dSYMs for crash symbolication. Release builds
