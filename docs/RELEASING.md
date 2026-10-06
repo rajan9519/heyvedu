@@ -98,8 +98,9 @@ The script:
    access; it is unsandboxed so global hotkeys and text insertion can work.
 4. Submits a ZIP of the app to Apple, requires an `Accepted` result, staples the
    ticket to the app, and checks Gatekeeper acceptance.
-5. Creates a compressed DMG containing the app, an Applications shortcut,
-   installation instructions, and the project license.
+5. Creates a compressed DMG with the app and an Applications shortcut, laid out by
+   Finder with a drag arrow. macOS asks once to let your terminal control Finder;
+   allow it (or later in System Settings > Privacy & Security > Automation).
 6. Signs and notarizes the DMG, staples its ticket, and validates it with
    `stapler` and Gatekeeper.
 7. Moves the finished image to `dist/HeyVedu-VERSION-arm64.dmg` and writes

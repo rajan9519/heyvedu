@@ -178,23 +178,60 @@ stage="$work/dmg"
 mkdir -p "$stage"
 ditto "$app" "$stage/HeyVedu.app"
 ln -s /Applications "$stage/Applications"
-cp LICENSE "$stage/LICENSE.txt"
-cat > "$stage/Install.txt" <<'EOF'
-HeyVedu — Apple silicon, macOS 26.4 or later
 
-Drag HeyVedu.app to Applications, eject this disk, and open HeyVedu from
-Applications. Look for the microphone icon in the menu bar (no Dock icon).
-Grant Microphone and Accessibility access when prompted.
-The first launch downloads about 2.1 GB of on-device models; allow time for
-them to prepare. Hold Control + Option to dictate and release to insert text.
-
-Source code and documentation: https://github.com/rajan9519/heyvedu
-EOF
+# Finder window layout: a background with a drag arrow, the app on the left and
+# Applications on the right. Positions match make-dmg-background.swift.
+mkdir -p "$stage/.background"
+swift scripts/make-dmg-background.swift "$work/background.png" 1
+swift scripts/make-dmg-background.swift "$work/background@2x.png" 2
+tiffutil -cathidpicheck "$work/background.png" "$work/background@2x.png" \
+  -out "$stage/.background/background.tiff"
 
 name="HeyVedu-$version-arm64$suffix.dmg"
 dmg="$work/$name"
-hdiutil create -volname "HeyVedu $version" -srcfolder "$stage" \
-  -fs HFS+ -format UDZO "$dmg"
+volume="HeyVedu $version"
+[[ ! -e "/Volumes/$volume" ]] || fail "Eject the mounted \"$volume\" disk image and rerun."
+# Build writable first so Finder can save the layout (.DS_Store), then compress.
+rw="$work/layout.dmg"
+hdiutil create -volname "$volume" -srcfolder "$stage" -fs HFS+ -format UDRW \
+  -size "$(( $(du -sm "$stage" | cut -f1) + 20 ))m" "$rw"
+device="$(hdiutil attach "$rw" -readwrite -noverify -noautoopen | awk '/Apple_HFS/ {print $1}')"
+[[ -n "$device" ]] || fail "Could not mount the writable disk image."
+if ! osascript <<EOF
+tell application "Finder"
+  tell disk "$volume"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    -- 640 x 400 content area plus the title bar.
+    set bounds of container window to {200, 120, 840, 548}
+    set viewOptions to icon view options of container window
+    set arrangement of viewOptions to not arranged
+    set icon size of viewOptions to 128
+    set text size of viewOptions to 13
+    set background picture of viewOptions to file ".background:background.tiff"
+    set position of item "HeyVedu.app" to {160, 200}
+    set position of item "Applications" to {480, 200}
+    close
+    open
+    update without registering applications
+    delay 2
+    close
+  end tell
+end tell
+EOF
+then
+  hdiutil detach "$device" -quiet || true
+  fail "Finder could not lay out the disk image. Allow your terminal to control Finder in
+System Settings > Privacy & Security > Automation, then rerun."
+fi
+for _ in {1..20}; do [[ -f "/Volumes/$volume/.DS_Store" ]] && break; sleep 0.5; done
+[[ -f "/Volumes/$volume/.DS_Store" ]] || fail "Finder did not save the disk image layout."
+rm -rf "/Volumes/$volume/.fseventsd"
+sync
+hdiutil detach "$device" -quiet
+hdiutil convert "$rw" -format UDZO -imagekey zlib-level=9 -o "$dmg"
 hdiutil verify "$dmg"
 if ! $unsigned; then
   codesign --sign "$SIGNING_IDENTITY" --timestamp "$dmg"
