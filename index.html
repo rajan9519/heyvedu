@@ -232,13 +232,12 @@ item.<span class="code-green">setData</span>(Data(), forType:
       <div class="section-heading center"><p class="kicker">Good to know</p><h2>Questions, answered.</h2></div>
       <div class="faq-list">
         <details><summary>Is HeyVedu really free?<span></span></summary><p>Yes. HeyVedu is free and open source under the GNU GPLv3. There is no HeyVedu account or subscription.</p></details>
-        <details><summary>Does it work without internet?<span></span></summary><p>Yes, after the initial build and model downloads. The default speech recognition and cleanup pipeline runs entirely on your Mac. Optional Claude Code and Codex CLI cleanup modes require their corresponding online provider.</p></details>
-        <details><summary>Does my audio leave my Mac?<span></span></summary><p>No. Recorded audio stays in memory, is never written to disk, and is transcribed on-device, even if you choose an optional advanced cleanup engine.</p></details>
+        <details><summary>Does it work without internet?<span></span></summary><p>Yes, after the initial build and model downloads. Speech recognition and cleanup run entirely on your Mac.</p></details>
+        <details><summary>Does my audio leave my Mac?<span></span></summary><p>No. Recorded audio stays in memory, is never written to disk, and is transcribed on-device.</p></details>
         <details><summary>Does HeyVedu save a dictation history?<span></span></summary><p>No. HeyVedu does not store a dictation history. Debug builds log timing and errors, but not audio, transcripts, vocabulary, or typed keys.</p></details>
         <details><summary>Why does it need Accessibility permission?<span></span></summary><p>Accessibility access lets HeyVedu observe the Control + Option push-to-talk shortcut and paste the finished text at your current cursor.</p></details>
         <details><summary>Which Macs are supported?<span></span></summary><p>HeyVedu requires an Apple-silicon Mac running macOS 26.4 or later. Dictation is currently English-only.</p></details>
         <details><summary>How do I install it?<span></span></summary><p>Clone or download the GitHub repository, then run <code>./scripts/run.sh</code>. You’ll need Xcode with the macOS 26.4 SDK. There is no signed binary release yet.</p></details>
-        <details><summary>What are advanced cleanup engines?<span></span></summary><p>They are optional cleanup modes that use your locally installed and authenticated Claude Code or Codex CLI. Transcript text and configured vocabulary may be sent to Anthropic or OpenAI through your existing account; audio stays local.</p></details>
       </div>
     </section>
 

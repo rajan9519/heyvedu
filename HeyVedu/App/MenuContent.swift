@@ -21,27 +21,20 @@ struct MenuContent: View {
 
         Toggle("Clean Up Transcripts", isOn: cleanupEnabled)
         if controller.cleaner.isEnabled {
-            if isUsingLocalCleanup {
-                Picker("On-Device Cleanup", selection: cleanupEngine) {
-                    Text(TextCleaner.Engine.s1Mini.title).tag(TextCleaner.Engine.s1Mini)
-                    Text(TextCleaner.Engine.dictationModel.title).tag(TextCleaner.Engine.dictationModel)
-                    Text(TextCleaner.Engine.appleIntelligence.title).tag(TextCleaner.Engine.appleIntelligence)
-                }
-            } else {
-                Button("Switch to On-Device Cleanup") {
-                    controller.cleaner.engine = .s1Mini
-                }
-                Text("Advanced cleanup is active")
-            }
-            if controller.cleaner.engine == .s1Mini {
-                Picker("Style", selection: styling) {
-                    ForEach(S1MiniBackend.Styling.allCases) { styling in
-                        Text(styling.title).tag(styling)
-                    }
+            Picker("Cleanup Engine", selection: cleanupEngine) {
+                ForEach(TextCleaner.Engine.allCases) { engine in
+                    Text(engine.title).tag(engine)
                 }
             }
             if case .unavailable(let reason) = controller.cleaner.availability {
-                Text("\(reason) — pasting raw transcripts")
+                if let progress = controller.cleaner.downloadProgress {
+                    Text(reason)
+                    Text("\(Self.progressBar(progress))  \(Int(progress * 100))%")
+                        .monospacedDigit()
+                    Text("Pasting raw transcripts until the download finishes")
+                } else {
+                    Text("\(reason) — pasting raw transcripts")
+                }
             }
         }
 
@@ -49,46 +42,6 @@ struct MenuContent: View {
             openWindow(id: VocabularyWindow.id)
             // Menu-bar apps aren't active by default; bring the window to the front.
             NSApp.activate()
-        }
-
-        Menu("Advanced Cleanup…") {
-            Text("Online engines send transcripts and vocabulary to their providers.")
-            if controller.cleaner.selectableEngines.contains(.claudeCode) {
-                Button {
-                    controller.cleaner.engine = .claudeCode
-                    controller.cleaner.isEnabled = true
-                } label: {
-                    if controller.cleaner.engine == .claudeCode {
-                        Label("Claude Code (Anthropic)", systemImage: "checkmark")
-                    } else {
-                        Text("Use Claude Code (Anthropic)")
-                    }
-                }
-            }
-            if controller.cleaner.selectableEngines.contains(.codex) {
-                Button {
-                    controller.cleaner.engine = .codex
-                    controller.cleaner.isEnabled = true
-                } label: {
-                    if controller.cleaner.engine == .codex {
-                        Label("Codex (OpenAI)", systemImage: "checkmark")
-                    } else {
-                        Text("Use Codex (OpenAI)")
-                    }
-                }
-            }
-            if !controller.cleaner.selectableEngines.contains(.claudeCode)
-                && !controller.cleaner.selectableEngines.contains(.codex) {
-                Text("Install and sign in to a supported CLI to enable online cleanup.")
-            }
-            if controller.cleaner.engine == .claudeCode {
-                Divider()
-                Picker("Claude Model", selection: claudeModel) {
-                    ForEach(ClaudeCodeBackend.Model.allCases) { model in
-                        Text(model.title).tag(model)
-                    }
-                }
-            }
         }
 
         Divider()
@@ -113,28 +66,10 @@ struct MenuContent: View {
         )
     }
 
-    private var isUsingLocalCleanup: Bool {
-        [.s1Mini, .dictationModel, .appleIntelligence].contains(controller.cleaner.engine)
-    }
-
     private var cleanupEngine: Binding<TextCleaner.Engine> {
         Binding(
             get: { controller.cleaner.engine },
             set: { controller.cleaner.engine = $0 }
-        )
-    }
-
-    private var styling: Binding<S1MiniBackend.Styling> {
-        Binding(
-            get: { controller.cleaner.styling },
-            set: { controller.cleaner.styling = $0 }
-        )
-    }
-
-    private var claudeModel: Binding<ClaudeCodeBackend.Model> {
-        Binding(
-            get: { controller.cleaner.claudeModel },
-            set: { controller.cleaner.claudeModel = $0 }
         )
     }
 
@@ -150,5 +85,11 @@ struct MenuContent: View {
             return "System Default (\(name))"
         }
         return "System Default"
+    }
+
+    /// Menu-style menu bar extras only render text, so the bar is drawn with characters.
+    private static func progressBar(_ progress: Double, width: Int = 20) -> String {
+        let filled = min(width, max(0, Int((progress * Double(width)).rounded(.down))))
+        return String(repeating: "▰", count: filled) + String(repeating: "▱", count: width - filled)
     }
 }

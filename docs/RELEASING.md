@@ -95,7 +95,7 @@ version replaces that version's output; increment the version/build for releases
 
 Build logs, notarization responses, the app, and Xcode's dSYM files remain under
 `build/release/run.XXXXXX/`. Keep the dSYMs for crash symbolication. Release builds
-do not bundle the speech or S1-mini models; they download on first launch.
+do not bundle the speech or Vedu Scribe models; they download on first launch.
 
 ## Update the cleanup model
 

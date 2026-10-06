@@ -93,6 +93,18 @@ nonisolated struct PinnedModel: Sendable {
         return directory
     }
 
+    /// Folders of models the app no longer uses, deleted once by `removeRetiredModels()`.
+    private static let retiredFolders = ["s1-mini"]
+
+    /// Frees the disk space of models from engines that were removed.
+    static func removeRetiredModels() {
+        let models = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appending(path: "HeyVedu/Models", directoryHint: .isDirectory)
+        for folder in retiredFolders {
+            try? FileManager.default.removeItem(at: models.appending(path: folder, directoryHint: .isDirectory))
+        }
+    }
+
     /// Deletes revisions left behind by earlier app versions, keeping only this one.
     private func removeOtherRevisions() {
         let fileManager = FileManager.default

@@ -5,33 +5,41 @@ import Observation
 import os
 
 /// Rewrites raw transcripts as the speaker intended: applies self-corrections, removes
-/// fillers, fixes grammar and punctuation. Interchangeable engines:
-/// - S1-mini by Superwhisper (default): a small on-device normalizer run with MLX.
-/// - Vedu Scribe: our own Qwen3.5-0.8B fine-tune, on-device with MLX (in testing).
+/// fillers, fixes grammar and punctuation. Interchangeable engines, each a `CleanupBackend`:
+/// - Vedu Scribe (default): our own Qwen3.5-0.8B fine-tune, on-device with MLX.
 /// - Apple Intelligence: on-device Foundation Model (text never leaves the Mac).
-/// - Claude Code or Codex: locally installed CLIs (text is sent to their service).
 ///
 /// There is no timeout: slow responses are awaited. Only when an engine cannot produce
 /// usable text (unavailable, refusal, error, or an output that drifts from what was said)
 /// is the raw transcript used, so a dictation is never lost.
 @Observable
 final class TextCleaner {
+    /// Raw values are persisted; keep them stable.
     enum Engine: String, CaseIterable, Identifiable {
-        case s1Mini
         case dictationModel
         case appleIntelligence
-        case claudeCode
-        case codex
+
+        static let defaultEngine = Engine.dictationModel
 
         var id: String { rawValue }
 
+        var name: String {
+            switch self {
+            case .dictationModel: return "Vedu Scribe"
+            case .appleIntelligence: return "Apple Intelligence"
+            }
+        }
+
         var title: String {
             switch self {
-            case .s1Mini: return "S1-mini by Superwhisper (on-device)"
-            case .dictationModel: return "Vedu Scribe (on-device)"
-            case .appleIntelligence: return "Apple Intelligence (on-device)"
-            case .claudeCode: return "Claude Code (sends text to Anthropic)"
-            case .codex: return "Codex (sends text to OpenAI)"
+            case .dictationModel, .appleIntelligence: return "\(name) (on-device)"
+            }
+        }
+
+        fileprivate func makeBackend() -> any CleanupBackend {
+            switch self {
+            case .dictationModel: return DictationModelBackend()
+            case .appleIntelligence: return AppleIntelligenceBackend()
             }
         }
     }
@@ -39,12 +47,20 @@ final class TextCleaner {
     enum Availability: Equatable {
         case available
         case unavailable(String)
+
+        var reason: String? {
+            if case .unavailable(let reason) = self { return reason }
+            return nil
+        }
     }
 
     struct Result {
         let text: String
         /// Why the raw transcript (or part of it) was used instead, if it was.
         let fallbackReason: String?
+        /// The raw transcript was used because the engine's model is still downloading
+        /// (or loading right after its download).
+        var awaitingDownload = false
     }
 
     /// User toggle; persisted.
@@ -62,96 +78,61 @@ final class TextCleaner {
         }
     }
 
-    var claudeModel: ClaudeCodeBackend.Model {
-        didSet {
-            UserDefaults.standard.set(claudeModel.rawValue, forKey: Self.claudeModelKey)
-            reconfigure()
-        }
-    }
-
-    /// S1-mini's register. Only changes the control line, so nothing is reloaded.
-    var styling: S1MiniBackend.Styling {
-        didSet { UserDefaults.standard.set(styling.rawValue, forKey: Self.stylingKey) }
-    }
-
-    /// Preferred spellings (phase 5). S1-mini ignores these.
+    /// Preferred spellings (phase 5), passed to engines that take instructions.
     var vocabulary: [String] = []
 
     private(set) var availability: Availability = .unavailable("Checking…")
 
-    var s1MiniState: S1MiniBackend.State { s1.state }
-    var dictationModelState: DictationModelBackend.State { dictationModel.state }
+    /// The selected engine's model download progress (0...1, whole percents), or nil when
+    /// nothing is downloading.
+    private(set) var downloadProgress: Double?
 
-    var selectableEngines: [Engine] {
-        Engine.allCases.filter {
-            switch $0 {
-            case .s1Mini, .dictationModel, .appleIntelligence: return true
-            case .claudeCode: return claude.availability() == .available
-            case .codex: return codex.availability() == .available
-            }
-        }
-    }
+    /// From the first byte of a model download until that model is ready (or fails).
+    /// Dictations meanwhile get the raw transcript.
+    private(set) var isAwaitingDownload = false
 
-    @ObservationIgnored private let s1 = S1MiniBackend()
-    @ObservationIgnored private let dictationModel = DictationModelBackend()
-    @ObservationIgnored private let apple = AppleIntelligenceBackend()
-    @ObservationIgnored private let claude = ClaudeCodeBackend()
-    @ObservationIgnored private let codex = CodexBackend()
+    /// Called once when a model downloaded in this session has loaded and cleanup starts working.
+    @ObservationIgnored var onDownloadedModelReady: (() -> Void)?
+
+    var modelState: LocalModelState? { backend.modelState }
+
+    @ObservationIgnored private let backends: [Engine: any CleanupBackend]
+    private var backend: any CleanupBackend { backends[engine]! }
 
     private static let enabledKey = "cleanupEnabled"
     private static let engineKey = "cleanupEngine"
-    private static let claudeModelKey = "claudeModel"
-    private static let stylingKey = "s1MiniStyling"
-    private static let s1DefaultMigrationKey = "s1MiniMadeDefault"
+    private static let defaultMigrationKey = "veduScribeMadeDefault"
+    /// Settings of engines that no longer exist.
+    private static let retiredKeys = ["claudeModel", "s1MiniStyling", "s1MiniMadeDefault"]
 
     init() {
         let defaults = UserDefaults.standard
-        // One-time switch to S1-mini when it became the default engine.
-        if !defaults.bool(forKey: Self.s1DefaultMigrationKey) {
+        // One-time switch to Vedu Scribe when it became the default engine.
+        if !defaults.bool(forKey: Self.defaultMigrationKey) {
             defaults.removeObject(forKey: Self.engineKey)
-            defaults.set(true, forKey: Self.s1DefaultMigrationKey)
+            Self.retiredKeys.forEach(defaults.removeObject(forKey:))
+            PinnedModel.removeRetiredModels()
+            defaults.set(true, forKey: Self.defaultMigrationKey)
         }
         isEnabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
-        engine = defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:)) ?? .s1Mini
-        claudeModel = defaults.string(forKey: Self.claudeModelKey).flatMap(ClaudeCodeBackend.Model.init(rawValue:)) ?? .opus
-        styling = defaults.string(forKey: Self.stylingKey).flatMap(S1MiniBackend.Styling.init(rawValue:)) ?? .semiFormal
-        if (engine == .claudeCode && claude.availability() != .available)
-            || (engine == .codex && codex.availability() != .available) {
-            engine = .s1Mini
-            defaults.set(engine.rawValue, forKey: Self.engineKey)
+        engine = defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:)) ?? .defaultEngine
+        backends = Dictionary(uniqueKeysWithValues: Engine.allCases.map { ($0, $0.makeBackend()) })
+        for backend in backends.values {
+            backend.onStateChange = { [weak self] in self?.refreshAvailability() }
         }
-        s1.onStateChange = { [weak self] in self?.refreshAvailability() }
-        dictationModel.onStateChange = { [weak self] in self?.refreshAvailability() }
         refreshAvailability()
     }
 
-    /// Loads S1-mini (downloading it on first run) or starts the Claude Code session ahead
-    /// of the first dictation (no-op for Apple Intelligence).
+    /// Starts slow setup for the selected engine (downloading and loading Vedu Scribe)
+    /// ahead of the first dictation.
     func warmUp() {
         guard isEnabled else { return }
-        switch engine {
-        case .s1Mini:
-            s1.prepare()
-        case .dictationModel:
-            dictationModel.prepare()
-        case .claudeCode:
-            refreshAvailability()
-            guard availability == .available else { return }
-            claude.prepare(model: claudeModel, instructions: CleanupPrompt.instructions(vocabulary: vocabulary))
-        case .codex:
-            break
-        case .appleIntelligence:
-            break
-        }
+        backend.warmUp()
     }
 
-    /// Stops background work (S1-mini's model, the Claude Code session). Called when the
-    /// app quits.
+    /// Stops background work and frees every engine's memory. Called when the app quits.
     func shutdown() {
-        s1.shutdown()
-        dictationModel.shutdown()
-        claude.shutdown()
-        apple.discardPrepared()
+        backends.values.forEach { $0.shutdown() }
     }
 
     /// Settings changed: stop whatever no longer applies and warm up the new choice.
@@ -162,43 +143,37 @@ final class TextCleaner {
     }
 
     func refreshAvailability() {
-        switch engine {
-        case .s1Mini: availability = s1.availability()
-        case .dictationModel: availability = dictationModel.availability()
-        case .appleIntelligence: availability = apple.availability()
-        case .claudeCode: availability = claude.availability()
-        case .codex: availability = codex.availability()
+        availability = backend.availability()
+        switch backend.modelState {
+        case .downloading(let fraction):
+            let progress = (fraction * 100).rounded(.down) / 100
+            if downloadProgress != progress { downloadProgress = progress }
+            isAwaitingDownload = true
+        case .loading:
+            downloadProgress = nil
+        case .ready:
+            downloadProgress = nil
+            if isAwaitingDownload {
+                isAwaitingDownload = false
+                onDownloadedModelReady?()
+            }
+        case .idle, .failed, nil:
+            downloadProgress = nil
+            isAwaitingDownload = false
         }
     }
 
-    /// Called when recording starts, so the engine is ready by the time the user releases:
-    /// builds the Foundation Models session, or makes sure the Claude Code session is
-    /// running with the current model and vocabulary.
+    /// Called when recording starts, so the engine is ready by the time the user releases
+    /// (for example, builds the Foundation Models session). Also retries a failed model load.
     func prepare() {
         refreshAvailability()
         guard isEnabled else { return }
-        if engine == .s1Mini {
-            s1.prepare()  // no-op once loaded; retries after a failed download
-            return
-        }
-        if engine == .dictationModel {
-            dictationModel.prepare()  // no-op once loaded; retries after a failure
-            return
-        }
-        guard availability == .available else { return }
-        let instructions = CleanupPrompt.instructions(vocabulary: vocabulary)
-        switch engine {
-        case .s1Mini, .dictationModel: break
-        case .appleIntelligence: apple.prepare(instructions: instructions)
-        case .claudeCode: claude.prepare(model: claudeModel, instructions: instructions)
-        case .codex: break
-        }
+        backend.prepare(instructions: CleanupPrompt.instructions(vocabulary: vocabulary))
     }
 
-    /// Releases the per-dictation Foundation Models session (the press was cancelled or had
-    /// no speech). The Claude Code session is long-lived and is kept.
+    /// Releases per-dictation state (the press was cancelled or had no speech).
     func discardPrepared() {
-        apple.discardPrepared()
+        backend.discardPrepared()
     }
 
     func clean(_ transcript: String) async -> Result {
@@ -206,52 +181,24 @@ final class TextCleaner {
         guard isEnabled else { return Result(text: transcript, fallbackReason: "cleanup disabled") }
         refreshAvailability()
         if case .unavailable(let reason) = availability {
-            return Result(text: transcript, fallbackReason: reason)
+            return Result(text: transcript, fallbackReason: reason, awaitingDownload: isAwaitingDownload)
         }
 
+        let backend = self.backend
         let instructions = CleanupPrompt.instructions(vocabulary: vocabulary)
-        let chunks: [String]
-        switch engine {
-        case .s1Mini:
-            chunks = await SentenceChunker.chunks(of: transcript, budget: S1MiniBackend.chunkTokenBudget) { [s1] in
-                await s1.tokenCount($0)
-            }
-        case .dictationModel:
-            chunks = await SentenceChunker.chunks(of: transcript, budget: DictationModelBackend.chunkTokenBudget) { [dictationModel] in
-                await dictationModel.tokenCount($0)
-            }
-        case .appleIntelligence: chunks = await apple.chunks(of: transcript, instructions: instructions)
-        case .claudeCode, .codex: chunks = [transcript]
-        }
+        let chunks = await backend.chunks(of: transcript, instructions: instructions)
 
         var outputs: [String] = []
         var fallbackReason: String?
         for chunk in chunks {
             do {
-                let cleaned: String
-                switch engine {
-                case .s1Mini:
-                    cleaned = try await s1.clean(chunk, styling: styling)
-                    // S1-mini can legitimately remove most of a transcript, expand
-                    // contractions, or return nothing. Chat-model overlap heuristics
-                    // reject these trained transformations (especially formal styling).
-                    if !cleaned.isEmpty { outputs.append(cleaned) }
-                    continue
-                case .dictationModel:
-                    cleaned = try await dictationModel.clean(chunk)
+                let cleaned = try await backend.clean(chunk, instructions: instructions)
+                if backend.isNormalizer {
                     // Trained to drop retracted text, apply spoken commands ("new line",
                     // "bullet point") and return nothing for filler-only speech, which the
                     // chat-model overlap heuristics would reject.
                     if !cleaned.isEmpty { outputs.append(cleaned) }
-                    continue
-                case .appleIntelligence:
-                    cleaned = try await apple.clean(chunk, instructions: instructions)
-                case .claudeCode:
-                    cleaned = try await claude.clean(chunk, model: claudeModel, instructions: instructions)
-                case .codex:
-                    cleaned = try await codex.clean(chunk, instructions: instructions)
-                }
-                if let rejection = OutputGuard.rejectionReason(input: chunk, output: cleaned, vocabulary: vocabulary) {
+                } else if let rejection = OutputGuard.rejectionReason(input: chunk, output: cleaned, vocabulary: vocabulary) {
                     outputs.append(chunk)
                     fallbackReason = rejection
                 } else {
@@ -263,10 +210,8 @@ final class TextCleaner {
             }
         }
         let joined = outputs.filter { !$0.isEmpty }.joined(separator: " ")
-        // The on-device normalizers own casing and punctuation: S1-mini's control line
-        // allows lowercase starts and no final period, and the fine-tune emits lists.
-        let ownsPunctuation = engine == .s1Mini || engine == .dictationModel
-        return Result(text: ownsPunctuation ? joined : TextPolish.finalize(joined), fallbackReason: fallbackReason)
+        // Normalizers own casing and punctuation (the fine-tune emits lists, for one).
+        return Result(text: backend.isNormalizer ? joined : TextPolish.finalize(joined), fallbackReason: fallbackReason)
     }
 }
 
@@ -279,7 +224,7 @@ nonisolated struct CleanedDictation {
     let text: String
 }
 
-final class AppleIntelligenceBackend {
+final class AppleIntelligenceBackend: CleanupBackend {
     enum BackendError: LocalizedError {
         case generation(String)
 
@@ -289,6 +234,8 @@ final class AppleIntelligenceBackend {
             }
         }
     }
+
+    var onStateChange: (() -> Void)?
 
     private let model = SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)
     private var preparedSession: LanguageModelSession?
@@ -312,11 +259,16 @@ final class AppleIntelligenceBackend {
     /// measured on-device, a prewarm followed by a few seconds of speech made the first
     /// response ~10× slower.
     func prepare(instructions: String) {
+        guard availability() == .available else { return }
         preparedSession = LanguageModelSession(model: model, instructions: instructions)
     }
 
     func discardPrepared() {
         preparedSession = nil
+    }
+
+    func shutdown() {
+        discardPrepared()
     }
 
     func clean(_ chunk: String, instructions: String) async throws -> String {

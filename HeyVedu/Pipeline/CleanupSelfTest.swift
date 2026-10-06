@@ -1,9 +1,10 @@
 #if DEBUG
 import Foundation
 
-/// Debug harness: `HeyVedu.app/Contents/MacOS/HeyVedu --cleanup-selftest [s1|qwen|apple|claude|codex] [vocab]`
-/// runs fixed phrases through the cleaner (S1-mini by default), prints the results, and exits. Only these
-/// canned phrases are printed — never real dictations.
+/// Debug harness: `HeyVedu.app/Contents/MacOS/HeyVedu --cleanup-selftest [engine] [vocab]`
+/// runs fixed phrases through the cleaner, prints the results, and exits. `engine` is a
+/// `TextCleaner.Engine` raw value (`dictationModel`, `appleIntelligence`); Vedu Scribe by
+/// default. Only these canned phrases are printed — never real dictations.
 enum CleanupSelfTest {
     static let flag = "--cleanup-selftest"
 
@@ -37,30 +38,19 @@ enum CleanupSelfTest {
         let cleaner = TextCleaner()
         let savedEngine = cleaner.engine
         let arguments = CommandLine.arguments
-        cleaner.engine = arguments.contains("codex") ? .codex : arguments.contains("claude") ? .claudeCode : arguments.contains("apple") ? .appleIntelligence : arguments.contains("qwen") ? .dictationModel : .s1Mini
+        cleaner.engine = TextCleaner.Engine.allCases.first { arguments.contains($0.rawValue) } ?? .defaultEngine
         defer { cleaner.engine = savedEngine }  // don't change the user's persisted choice
-        if cleaner.engine == .s1Mini {
+        if cleaner.modelState != nil {
             // Wait for the download/load that setting the engine kicked off.
             let started = ContinuousClock.now
             while cleaner.availability != .available {
-                if case .failed(let reason) = cleaner.s1MiniState {
-                    print("S1-mini unavailable: \(reason)")
+                if case .failed(let reason) = cleaner.modelState {
+                    print("\(cleaner.engine.title) unavailable: \(reason)")
                     return
                 }
                 try? await Task.sleep(for: .milliseconds(200))
             }
-            print("S1-mini ready after \(started.duration(to: .now))")
-        }
-        if cleaner.engine == .dictationModel {
-            let started = ContinuousClock.now
-            while cleaner.availability != .available {
-                if case .failed(let reason) = cleaner.dictationModelState {
-                    print("Vedu Scribe unavailable: \(reason)")
-                    return
-                }
-                try? await Task.sleep(for: .milliseconds(200))
-            }
-            print("Vedu Scribe ready after \(started.duration(to: .now))")
+            print("\(cleaner.engine.title) ready after \(started.duration(to: .now))")
         }
         print("Engine: \(cleaner.engine.title) · availability: \(cleaner.availability)")
         // `vocab` runs only the vocabulary cases.

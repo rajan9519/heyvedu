@@ -33,6 +33,11 @@ final class DictationController {
     @ObservationIgnored private var audioLive = false
     /// The current press passed the hold threshold (the HUD is visible).
     @ObservationIgnored private var pressActivated = false
+    /// The user was told once that dictations paste raw text while the cleanup model
+    /// downloads; later dictations during the same download stay quiet.
+    @ObservationIgnored private var downloadNoticeShown = false
+    /// The cleanup model finished downloading mid-dictation; announce it once that's done.
+    @ObservationIgnored private var cleanupReadyNoticePending = false
 
     private static let minimumDuration: TimeInterval = 0.2
     private let logger = Logger(subsystem: "com.heyvedu.app", category: "Dictation")
@@ -91,6 +96,7 @@ final class DictationController {
         }
 
         speechModel.prepare()
+        cleaner.onDownloadedModelReady = { [weak self] in self?.cleanupModelReady() }
         cleaner.vocabulary = vocabulary.terms
         cleaner.warmUp()
 
@@ -112,6 +118,22 @@ final class DictationController {
             hotkey.stop()
             hotkeyAvailable = false
         }
+    }
+
+    /// A cleanup model downloaded this session is now in use. Tell the user, without
+    /// covering the HUD of a dictation in progress.
+    private func cleanupModelReady() {
+        downloadNoticeShown = false
+        if status == .idle {
+            showCleanupReadyNotice()
+        } else {
+            cleanupReadyNoticePending = true
+        }
+    }
+
+    private func showCleanupReadyNotice() {
+        cleanupReadyNoticePending = false
+        hud.flash("\(cleaner.engine.name) is ready — transcripts will be cleaned up", for: .seconds(3))
     }
 
     // MARK: - Hotkey handling
@@ -218,6 +240,8 @@ final class DictationController {
                 cleaner.discardPrepared()
                 if recording.samples.isEmpty {
                     hud.flash("No audio from microphone")
+                } else if cleanupReadyNoticePending {
+                    showCleanupReadyNotice()
                 } else {
                     hud.hide()
                 }
@@ -235,6 +259,7 @@ final class DictationController {
 
                 var output = trimmed
                 var fallbackReason: String?
+                var awaitingDownload = false
                 if cleaner.isEnabled {
                     hud.showProcessing("Cleaning…")
                     let started = ContinuousClock.now
@@ -242,19 +267,28 @@ final class DictationController {
                     let result = await cleaner.clean(trimmed)
                     output = result.text
                     fallbackReason = result.fallbackReason
+                    awaitingDownload = result.awaitingDownload
                     // Timing and fallback reason only — never the text itself.
                     DebugTrace.write("cleanup[\(cleaner.engine.rawValue)]: \(ContinuousClock.now - started)\(fallbackReason.map { ", fallback: \($0)" } ?? "")")
                 }
                 hud.hide()
                 guard !output.isEmpty else {
-                    // S1-mini drops filler-only speech ("um") entirely.
+                    // Vedu Scribe drops filler-only speech ("um") entirely.
                     hud.flash("Nothing to paste")
                     return
                 }
                 inserter.insert(output)
-                if let fallbackReason {
+                if awaitingDownload {
+                    // Once per download; the menu shows its progress.
+                    if !downloadNoticeShown {
+                        downloadNoticeShown = true
+                        hud.flash("Pasting raw text until \(cleaner.engine.name) finishes downloading", for: .seconds(4))
+                    }
+                } else if let fallbackReason {
                     // Tell the user the pasted text is the uncleaned transcript, and why.
                     hud.flash("Pasted raw text — \(fallbackReason)", for: .seconds(3))
+                } else if cleanupReadyNoticePending {
+                    showCleanupReadyNotice()
                 }
             } catch {
                 // Never log transcript content; error descriptions only.

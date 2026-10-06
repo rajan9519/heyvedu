@@ -8,23 +8,15 @@ import os
 /// dictation cleanup (fillers, self-corrections, punctuation, numbers, spoken formatting
 /// commands and lists), quantized for MLX (attention 8-bit, rest 4-bit, ~535 MB).
 ///
-/// Like S1-mini it is a normalizer, not a chat model: it was trained only to rewrite the
-/// transcript, so questions and commands in it are cleaned, never answered or followed.
+/// It is a normalizer, not a chat model: it was trained only to rewrite the transcript, so
+/// questions and commands in it are cleaned, never answered or followed.
 ///
 /// Weights are downloaded from Hugging Face at the revision pinned below (see `PinnedModel`).
 /// To ship a new fine-tune, upload it, then run `scripts/pin-cleanup-model.sh` to update the
 /// pin; the next app release downloads it and deletes the old one. Debug builds prefer a local
 /// model linked by `scripts/install-cleanup-model.sh`, for testing a fine-tune before uploading.
 @Observable
-final class DictationModelBackend {
-    enum State: Equatable {
-        case idle
-        case downloading(Double)
-        case loading
-        case ready
-        case failed(String)
-    }
-
+final class DictationModelBackend: CleanupBackend {
     nonisolated enum BackendError: LocalizedError {
         case notReady(String)
         case notPublished
@@ -37,7 +29,10 @@ final class DictationModelBackend {
         }
     }
 
-    private(set) var state: State = .idle
+    private(set) var state: LocalModelState = .idle
+
+    var isNormalizer: Bool { true }
+    var modelState: LocalModelState? { state }
 
     /// Called on every state change so the cleaner can refresh its availability.
     @ObservationIgnored var onStateChange: (() -> Void)?
@@ -96,8 +91,9 @@ final class DictationModelBackend {
         case .ready: return .available
         case .idle: return .unavailable("Vedu Scribe isn't loaded yet")
         case .downloading(let fraction):
-            let megabytes = Self.model.totalSize / 1_000_000
-            return .unavailable("Downloading Vedu Scribe (\(megabytes) MB)… \(Int(fraction * 100))%")
+            let total = Self.model.totalSize / 1_000_000
+            let done = Int64(Double(total) * fraction)
+            return .unavailable("Downloading Vedu Scribe… \(done) of \(total) MB")
         case .loading: return .unavailable("Loading Vedu Scribe…")
         case .failed(let reason): return .unavailable(reason)
         }
@@ -105,7 +101,7 @@ final class DictationModelBackend {
 
     /// Downloads (first use, or after an update pins a new revision) and loads the model in
     /// the background. Safe to call repeatedly; retries after a failure.
-    func prepare() {
+    func warmUp() {
         guard container == nil, loadTask == nil else { return }
         loadTask = Task {
             defer { loadTask = nil }
@@ -146,26 +142,32 @@ final class DictationModelBackend {
         #endif
         guard !Self.model.revision.isEmpty else { throw BackendError.notPublished }
         return try await Self.model.ensureDownloaded { [weak self] fraction in
-            Task { @MainActor in self?.setState(.downloading(fraction)) }
+            Task { @MainActor in
+                // Progress tasks can land after the download finished; never step back.
+                guard let self, self.loadTask != nil, self.state == .idle || self.state.isDownloading else { return }
+                self.setState(.downloading(fraction))
+            }
         }
     }
 
-    private func setState(_ newState: State) {
+    private func setState(_ newState: LocalModelState) {
         state = newState
         onStateChange?()
     }
 
     // MARK: Cleanup
 
-    /// Token count of `text`, for chunking. Nil until the model is loaded.
-    func tokenCount(_ text: String) async -> Int? {
-        guard let container else { return nil }
-        return await container.encode(text).count
+    func chunks(of transcript: String, instructions: String) async -> [String] {
+        await SentenceChunker.chunks(of: transcript, budget: Self.chunkTokenBudget) { [container] text in
+            guard let container else { return nil }
+            return await container.encode(text).count
+        }
     }
 
     /// Cleans one chunk. An empty result is valid: filler-only input ("um") has no
-    /// written form.
-    func clean(_ chunk: String) async throws -> String {
+    /// written form. The model was trained on a fixed prompt, so `instructions` (and with
+    /// them the vocabulary) are not used.
+    func clean(_ chunk: String, instructions: String) async throws -> String {
         guard let container else {
             throw BackendError.notReady(availability().reason ?? "Vedu Scribe isn't loaded")
         }

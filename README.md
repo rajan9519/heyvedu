@@ -3,7 +3,7 @@
 Private, push-to-talk dictation for macOS. Hold **Control + Option**, speak, and
 release to insert polished text into the app you are using.
 
-Speech recognition and the default S1-mini text cleanup run on your Mac. Audio
+Speech recognition and the default Vedu Scribe text cleanup run on your Mac. Audio
 stays in memory, transcripts are not logged, and the default dictation flow
 does not upload your speech or text. The default flow needs an internet
 connection only for the initial build and model downloads.
@@ -17,8 +17,8 @@ connection only for the initial build and model downloads.
   FluidAudio and Core ML.
 - Removes fillers and false starts, applies self-corrections, and fixes
   punctuation and capitalization.
-- Offers local cleanup with S1-mini by Superwhisper (the default) or Apple
-  Intelligence.
+- Offers local cleanup with Vedu Scribe, HeyVedu's own model (the default), or
+  Apple Intelligence.
 - Lets you select any connected microphone and follows device changes.
 - Supports a local preferred-spellings vocabulary for Apple Intelligence cleanup.
 - Keeps no dictation history and never writes recorded audio to disk.
@@ -34,11 +34,11 @@ For example:
 - macOS 26.4 or later
 - Xcode with the macOS 26.4 SDK
 - An internet connection for the initial build and first-run model downloads
-- About 2.1 GB of free space for the speech and S1-mini models, plus build data
+- About 1.2 GB of free space for the speech and Vedu Scribe models, plus build data
 
 Apple Intelligence cleanup additionally requires a supported Mac with Apple
-Intelligence enabled and its model downloaded. S1-mini does not require Apple
-Intelligence.
+Intelligence enabled and its model downloaded. Vedu Scribe does not require
+Apple Intelligence.
 
 ## Install from source
 
@@ -103,10 +103,14 @@ the microphone icon in the menu bar.
 The first launch downloads and prepares two models:
 
 - Parakeet speech recognition: about 600 MB
-- S1-mini transcript cleanup: about 1.5 GB
+- Vedu Scribe transcript cleanup: about 560 MB
 
 These downloads come from Hugging Face. They contain model files only; no audio
 or transcript is uploaded. Later launches use the cached copies.
+
+You can dictate while Vedu Scribe downloads: HeyVedu pastes the raw transcript
+meanwhile and says so once. The menu shows the download's progress, and a
+notice appears when cleanup starts working.
 
 Because source builds are ad-hoc signed, macOS may forget the Accessibility
 grant after rebuilding. See [Troubleshooting](#troubleshooting) if the hotkey
@@ -134,31 +138,12 @@ Click the menu-bar icon to configure the app.
 
 | Engine | Where it runs | Notes |
 | --- | --- | --- |
-| **S1-mini by Superwhisper** | On your Mac | Default; English-only; choose Casual, Semi-casual, Semi-formal, or Formal style. Does not use the vocabulary list. |
-| **Vedu Scribe** | On your Mac | HeyVedu's own cleanup model, a Qwen3.5-0.8B fine-tune ([model card](https://huggingface.co/heyvedu/vedu-scribe-0.8b)). English-only; downloads about 560 MB on first use. Does not use the vocabulary list. |
+| **Vedu Scribe** | On your Mac | Default. HeyVedu's own cleanup model, a Qwen3.5-0.8B fine-tune ([model card](https://huggingface.co/heyvedu/vedu-scribe-0.8b)). English-only; downloads about 560 MB on first use. Does not use the vocabulary list. |
 | **Apple Intelligence** | On your Mac | Uses Apple's on-device Foundation Model. Falls back to the raw transcript if the model is unavailable. |
 
 Turn off **Clean Up Transcripts** to paste the raw, locally generated transcript.
 If a cleanup engine fails or rejects a result, HeyVedu pastes the raw
 transcript instead and tells you why.
-
-### Advanced cleanup
-
-The **Advanced Cleanup…** menu can use your own locally installed and
-authenticated Claude Code or Codex CLI. These are your existing Claude Code or
-Codex sessions; they are not HeyVedu accounts, services, or integrations.
-
-| Engine | Service | Data sent |
-| --- | --- | --- |
-| **Claude Code** | Your local `claude` CLI and its authenticated session | Transcript text and configured vocabulary |
-| **Codex** | Your local `codex` CLI and its authenticated session | Transcript text and configured vocabulary |
-
-Selecting one of these engines asks the corresponding CLI on your Mac to clean
-up the transcript using the account and configuration already associated with
-that CLI. HeyVedu does not provide, own, or authenticate the Claude Code or
-Codex session, and it does not upload through a HeyVedu server. Codex uses an
-ephemeral CLI session for each dictation. Choose **Switch to On-Device Cleanup**
-in the main menu to return to local cleanup.
 
 ### Vocabulary
 
@@ -169,9 +154,7 @@ jargon. The list is stored locally at:
 ~/Library/Application Support/HeyVedu/vocabulary.json
 ```
 
-Vocabulary is used by Apple Intelligence. If you select an advanced online
-engine, it is sent with the transcript as cleanup instructions. S1-mini
-currently ignores it.
+Vocabulary is used by Apple Intelligence. Vedu Scribe currently ignores it.
 
 ### Microphone
 
@@ -185,24 +168,16 @@ processes the audio captured so far.
 The fully local path is the default:
 
 ```text
-Microphone → in-memory audio → on-device Parakeet → on-device S1-mini → paste
+Microphone → in-memory audio → on-device Parakeet → on-device Vedu Scribe → paste
 ```
 
-| Data | S1-mini / cleanup off | Apple Intelligence |
+| Data | Vedu Scribe / cleanup off | Apple Intelligence |
 | --- | --- | --- |
 | Recorded audio | Memory only; stays on-device | Memory only; stays on-device |
 | Speech recognition | On-device | On-device |
 | Transcript cleanup | On-device | On-device |
-| Preferred vocabulary | Local file; unused by S1-mini | Local file and on-device prompt |
+| Preferred vocabulary | Local file; unused by Vedu Scribe | Local file and on-device prompt |
 | Dictation history | Not stored | Not stored |
-
-If you choose an [advanced online engine](#advanced-cleanup), only cleanup
-changes: recorded audio and speech recognition stay on-device. HeyVedu passes
-the transcript text and configured vocabulary to your locally installed
-`claude` or `codex` CLI, which sends the request through your own authenticated
-Claude Code or Codex session to Anthropic or OpenAI. The request is not sent
-through a HeyVedu account or server. HeyVedu does not store dictation history;
-your CLI configuration and the selected provider's terms apply to requests.
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
 **Command + V**, and restoring the previous clipboard contents after roughly
@@ -234,8 +209,8 @@ Relaunch the app and grant Accessibility access again.
 ### A model failed to load
 
 Check the internet connection and available disk space, then click **Retry
-Loading Speech Model** when that option appears. For S1-mini, switching the
-cleanup engine away and back retries its preparation. First-time Core ML
+Loading Speech Model** when that option appears. For Vedu Scribe, the next
+dictation retries its preparation. First-time Core ML
 compilation can take longer than later launches.
 
 ### Dictation is transcribed but not inserted
@@ -247,7 +222,7 @@ the target application must accept paste at the current cursor position.
 
 Check that the Mac supports Apple Intelligence, that it is enabled in System
 Settings, and that the system model has finished downloading. You can continue
-with S1-mini or raw transcripts meanwhile.
+with Vedu Scribe or raw transcripts meanwhile.
 
 ### Bluetooth audio starts late
 
@@ -261,8 +236,8 @@ runs Parakeet through Core ML for speech recognition. The selected cleanup
 engine normalizes the transcript, then the app temporarily uses the clipboard
 to paste the result into the frontmost application.
 
-Dependencies and model revisions are pinned in the project. S1-mini and Vedu
-Scribe files are also checked against pinned SHA-256 hashes before loading.
+Dependencies and model revisions are pinned in the project. Vedu Scribe files
+are also checked against pinned SHA-256 hashes before loading.
 When an app update pins a newer model revision, the app downloads it on next use
 and deletes the old one.
 
@@ -276,11 +251,10 @@ and deletes the old one.
   paste
 - Restoring the clipboard may not preserve lazily provided clipboard content
   from every application
-- S1-mini and Vedu Scribe do not use custom vocabulary
+- Vedu Scribe does not use custom vocabulary
 
 ## License
 
 HeyVedu is licensed under the [GNU General Public License v3.0](LICENSE).
-Third-party packages and downloaded models retain their own licenses. S1-mini
-is provided by Superwhisper under its published model license. Vedu Scribe is
-released under Apache-2.0.
+Third-party packages and downloaded models retain their own licenses. Vedu
+Scribe is released under Apache-2.0.
