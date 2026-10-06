@@ -64,6 +64,23 @@ mkdir -p build/release dist
 work="$(mktemp -d "$PWD/build/release/run.XXXXXX")"
 echo "Build logs and intermediate artifacts: $work"
 
+# Building, staging and mounting the DMG each register another copy of the app with Launch
+# Services. Duplicates of one bundle ID can hide the installed app from the Apps view, so
+# unregister this run's copies on exit, whether or not the run succeeded.
+lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+volume=
+unregister_build_copies() {
+  "$lsregister" -dump 2>/dev/null \
+    | awk '/^path:/ {p = $0} /^identifier:/ && $2 == "com.heyvedu.app" {print p}' \
+    | sed -E 's/^path: +//; s/ \(0x[0-9a-f]+\)$//' | sort -u \
+    | while IFS= read -r path; do
+        if [[ "$path" == "$work/"* || ( -n "$volume" && "$path" == "/Volumes/$volume/"* ) ]]; then
+          "$lsregister" -u "$path" 2>/dev/null || true
+        fi
+      done
+}
+trap unregister_build_copies EXIT
+
 # Versions are YY.MM.DDNN: the release date plus that day's build count (NN), in the three
 # parts Apple allows, used as both the display version and Sparkle's build number. Because
 # DDNN compares as one number, later days and later builds of a day always sort higher. NN continues from the latest release in the
