@@ -4,7 +4,7 @@ import Foundation
 /// Never pass transcript text or typed keys here.
 nonisolated enum DebugTrace {
     #if DEBUG
-    private static let queue = DispatchQueue(label: "com.rajan.heyvedu.debugtrace")
+    private static let queue = DispatchQueue(label: "com.heyvedu.app.debugtrace")
     private static let fileURL: URL = {
         let dir = FileManager.default.homeDirectoryForCurrentUser
             .appending(path: "Library/Logs/HeyVedu", directoryHint: .isDirectory)

@@ -35,7 +35,7 @@ final class DictationController {
     @ObservationIgnored private var pressActivated = false
 
     private static let minimumDuration: TimeInterval = 0.2
-    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "Dictation")
+    private let logger = Logger(subsystem: "com.heyvedu.app", category: "Dictation")
 
     // MARK: - Menu bar presentation
 

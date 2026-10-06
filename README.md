@@ -202,7 +202,7 @@ Ad-hoc signatures can cause macOS to retain a stale Accessibility entry. Quit
 HeyVedu, run:
 
 ```bash
-tccutil reset Accessibility com.rajan.heyvedu
+tccutil reset Accessibility com.heyvedu.app
 ```
 
 Relaunch the app and grant Accessibility access again.

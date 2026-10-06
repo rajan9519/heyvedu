@@ -35,7 +35,7 @@ final class HotkeyMonitor {
     private var phase: Phase = .idle
     private var activationTask: Task<Void, Never>?
     private var swallowEscapeKeyUp = false
-    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "Hotkey")
+    private let logger = Logger(subsystem: "com.heyvedu.app", category: "Hotkey")
 
     /// Returns false if the tap could not be created (usually missing Accessibility trust).
     func start() -> Bool {

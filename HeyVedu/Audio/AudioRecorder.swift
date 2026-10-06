@@ -76,8 +76,8 @@ private nonisolated final class CaptureSession: @unchecked Sendable {
     /// Set once at init, before any capture starts.
     var sink: (@Sendable (Event) -> Void)?
 
-    private let queue = DispatchQueue(label: "com.rajan.heyvedu.audio", qos: .userInitiated)
-    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "Audio")
+    private let queue = DispatchQueue(label: "com.heyvedu.app.audio", qos: .userInitiated)
+    private let logger = Logger(subsystem: "com.heyvedu.app", category: "Audio")
     private var engine: AVAudioEngine?
     private var processor: CaptureProcessor?
     private var configObserver: NSObjectProtocol?

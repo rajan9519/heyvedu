@@ -66,7 +66,7 @@ final class ClaudeCodeBackend {
     private static let maxTurnsPerSession = 20
 
     private var session: ClaudeSession?
-    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "Claude")
+    private let logger = Logger(subsystem: "com.heyvedu.app", category: "Claude")
 
     /// Where Claude Code's installers put the binary. Apps launched from Finder get a
     /// minimal PATH, so look in the known locations rather than relying on it.

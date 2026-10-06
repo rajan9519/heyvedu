@@ -16,7 +16,7 @@ final class VocabularyStore {
     static let maxTermLength = 60
 
     @ObservationIgnored private let fileURL: URL
-    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "Vocabulary")
+    private let logger = Logger(subsystem: "com.heyvedu.app", category: "Vocabulary")
 
     private struct FileFormat: Codable {
         var version = 1

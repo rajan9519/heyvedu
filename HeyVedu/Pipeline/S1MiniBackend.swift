@@ -65,7 +65,7 @@ final class S1MiniBackend {
 
     @ObservationIgnored private var container: ModelContainer?
     @ObservationIgnored private var loadTask: Task<Void, Never>?
-    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "S1Mini")
+    private let logger = Logger(subsystem: "com.heyvedu.app", category: "S1Mini")
 
     // MARK: Pinned model
 

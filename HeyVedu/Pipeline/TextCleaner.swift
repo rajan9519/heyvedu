@@ -266,7 +266,7 @@ final class AppleIntelligenceBackend {
 
     private let model = SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)
     private var preparedSession: LanguageModelSession?
-    private let logger = Logger(subsystem: "com.rajan.heyvedu", category: "Cleanup")
+    private let logger = Logger(subsystem: "com.heyvedu.app", category: "Cleanup")
 
     private static let options = GenerationOptions(sampling: .greedy)
     /// Fallback size of instructions + examples when they can't be counted, in tokens.
