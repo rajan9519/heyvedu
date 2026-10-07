@@ -97,8 +97,10 @@ signing, Apple ID setup, notarization, and installation verification steps.
 
 ## First launch
 
-HeyVedu is a menu-bar app, so it does not appear in the Dock. Look for
-the microphone icon in the menu bar.
+HeyVedu opens a short welcome guide that walks through the steps below and
+a practice dictation. It runs from the menu bar (and shows in the Dock);
+click the Dock icon or choose **Show Welcome Guide…** from the menu to see
+the guide again.
 
 1. Grant **Microphone** access so the app can record while the hotkey is held.
 2. Grant **Accessibility** access so it can observe the push-to-talk hotkey and

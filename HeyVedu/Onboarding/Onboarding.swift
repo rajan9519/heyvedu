@@ -144,7 +144,7 @@ private struct WelcomeStep: View {
             .font(.title3)
             .padding(.top, 8)
 
-            Label("HeyVedu lives in the menu bar, at the top right of your screen.", systemImage: "menubar.arrow.up.rectangle")
+            Label("HeyVedu runs from the menu bar, at the top right of your screen.", systemImage: "menubar.arrow.up.rectangle")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .padding(.top, 8)

@@ -224,7 +224,6 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HeyVedu;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HeyVedu records audio only while you hold Control+Option, and transcribes it on this Mac.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -256,7 +255,6 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HeyVedu;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "HeyVedu records audio only while you hold Control+Option, and transcribes it on this Mac.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

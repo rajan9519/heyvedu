@@ -62,6 +62,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if firstRun { onboarding.show() }
     }
 
+    /// Clicking the Dock icon with no window open brings up the welcome guide.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows { onboarding.show() }
+        return true
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         controller.cleaner.shutdown()
     }
