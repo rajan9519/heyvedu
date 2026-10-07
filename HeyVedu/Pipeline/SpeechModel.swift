@@ -17,6 +17,11 @@ final class SpeechModel: Transcriber {
     }
 
     private(set) var state: State = .idle
+    /// Fraction of the first-launch download completed, while `state == .downloading`.
+    private(set) var downloadProgress: Double?
+
+    /// Called once the model is ready (after a download or a load from cache).
+    @ObservationIgnored var onReady: (() -> Void)?
 
     @ObservationIgnored private let engine = ParakeetEngine()
     @ObservationIgnored private var prepareTask: Task<Void, Never>?
@@ -34,12 +39,21 @@ final class SpeechModel: Transcriber {
                 state = await engine.modelsCached() ? .loading : .downloading
                 try await engine.load { [weak self] progress in
                     // Download phases → "downloading"; Core ML compilation → "loading".
-                    guard case .compiling = progress.phase else { return }
+                    let fraction = progress.fractionCompleted
+                    guard case .compiling = progress.phase else {
+                        Task { @MainActor in
+                            if self?.state == .downloading { self?.downloadProgress = fraction }
+                        }
+                        return
+                    }
                     Task { @MainActor in
                         if self?.state == .downloading { self?.state = .loading }
+                        self?.downloadProgress = nil
                     }
                 }
                 state = .ready
+                downloadProgress = nil
+                onReady?()
                 DebugTrace.write("model: ready in \(ContinuousClock.now - started)")
             } catch {
                 logger.error("Speech model failed to load: \(error.localizedDescription, privacy: .public)")

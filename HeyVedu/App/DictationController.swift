@@ -20,6 +20,8 @@ final class DictationController {
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
+    /// Dictations pasted this session; the onboarding practice step watches it.
+    private(set) var completedDictations = 0
 
     @ObservationIgnored private let hotkey = HotkeyMonitor()
     @ObservationIgnored private let recorder = AudioRecorder()
@@ -80,7 +82,9 @@ final class DictationController {
 
     // MARK: - Lifecycle
 
-    func start() {
+    /// - Parameter requestPermissions: Prompt for missing grants right away. Off while the
+    ///   onboarding window is up, which asks for them with an explanation instead.
+    func start(requestPermissions: Bool = true) {
         devices.start()
 
         hotkey.onEvent = { [weak self] event in self?.handle(event) }
@@ -95,6 +99,7 @@ final class DictationController {
             self?.finishRecording()
         }
 
+        speechModel.onReady = { [weak self] in self?.showLaunchHintIfNeeded() }
         speechModel.prepare()
         cleaner.onDownloadedModelReady = { [weak self] in self?.cleanupModelReady() }
         cleaner.vocabulary = vocabulary.terms
@@ -103,10 +108,26 @@ final class DictationController {
         permissions.onChange = { [weak self] in self?.permissionsChanged() }
         permissions.startMonitoring()
 
-        if !permissions.microphoneGranted { permissions.requestMicrophone() }
-        if !permissions.accessibilityGranted { permissions.requestAccessibility() }
+        if requestPermissions {
+            if !permissions.microphoneGranted { permissions.requestMicrophone() }
+            if !permissions.accessibilityGranted { permissions.requestAccessibility() }
+        }
         permissionsChanged()
     }
+
+    /// For the first few launches after onboarding, remind the user of the hotkey once
+    /// everything is ready to dictate.
+    private func showLaunchHintIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard Onboarding.isCompleted else { return }
+        let shown = defaults.integer(forKey: Self.launchHintsShownKey)
+        guard shown < Self.launchHintCount, status == .idle, permissions.allGranted, hotkeyAvailable else { return }
+        defaults.set(shown + 1, forKey: Self.launchHintsShownKey)
+        hud.flash("Hold ⌃ Control + ⌥ Option anywhere to dictate", for: .seconds(3))
+    }
+
+    private static let launchHintsShownKey = "launchHintsShown"
+    private static let launchHintCount = 3
 
     private func permissionsChanged() {
         if permissions.accessibilityGranted {
@@ -278,6 +299,7 @@ final class DictationController {
                     return
                 }
                 inserter.insert(output)
+                completedDictations += 1
                 if awaitingDownload {
                     // Once per download; the menu shows its progress.
                     if !downloadNoticeShown {

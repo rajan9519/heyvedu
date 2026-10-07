@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuContent: View {
     let controller: DictationController
     let updates: UpdateController
+    let showWelcomeGuide: () -> Void
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -66,6 +67,7 @@ struct MenuContent: View {
                 Text(updates.menuTitle)
             }
         }
+        Button("Show Welcome Guide…", action: showWelcomeGuide)
         Button("Quit HeyVedu") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
