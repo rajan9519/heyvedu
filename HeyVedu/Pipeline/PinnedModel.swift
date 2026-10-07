@@ -127,17 +127,31 @@ nonisolated struct PinnedModel: Sendable {
         guard let url = URL(string: "https://huggingface.co/\(repository)/resolve/\(revision)/\(name)") else {
             throw DownloadError.download(model: displayName, reason: "bad URL for \(name)")
         }
-        let delegate = DownloadProgressDelegate(progress: progress)
-        let (location, response) = try await URLSession.shared.download(from: url, delegate: delegate)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            try? FileManager.default.removeItem(at: location)
-            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw DownloadError.download(model: displayName, reason: "HTTP \(status) for \(name)")
-        }
-        // The system deletes `location` once this returns; move it somewhere we control.
+        // The system deletes the downloaded file once the completion handler returns, so it
+        // is moved somewhere we control from inside the handler.
         let kept = FileManager.default.temporaryDirectory.appending(path: "\(folder)-\(UUID().uuidString)")
-        try FileManager.default.moveItem(at: location, to: kept)
-        return kept
+        let model = displayName
+        let download = ProgressReportingDownload()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
+                download.start(url: url, progress: progress) { location, response, error in
+                    if let error { return continuation.resume(throwing: error) }
+                    guard let location, let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                        return continuation.resume(throwing: DownloadError.download(
+                            model: model, reason: "HTTP \(status) for \(name)"))
+                    }
+                    do {
+                        try FileManager.default.moveItem(at: location, to: kept)
+                        continuation.resume(returning: kept)
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        } onCancel: {
+            download.cancel()
+        }
     }
 
     /// Streams the file through SHA-256 in 4 MB blocks, off the main actor.
@@ -153,22 +167,51 @@ nonisolated struct PinnedModel: Sendable {
     }
 }
 
-/// Reports bytes written for one download task.
-private nonisolated final class DownloadProgressDelegate: NSObject, URLSessionDownloadDelegate {
-    private let progress: @Sendable (Int64) -> Void
+/// One download task that reports bytes received as they arrive.
+///
+/// The async `URLSession.download(from:delegate:)` never calls the delegate's
+/// `didWriteData`, so progress stayed at 0% until the file finished. Observing the task's
+/// byte count reports bytes as they arrive.
+private nonisolated final class ProgressReportingDownload: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: URLSessionDownloadTask?
+    private var observation: NSKeyValueObservation?
+    private var isCancelled = false
 
-    init(progress: @escaping @Sendable (Int64) -> Void) {
-        self.progress = progress
-    }
-
-    func urlSession(
-        _ session: URLSession, downloadTask: URLSessionDownloadTask,
-        didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64
+    func start(
+        url: URL, progress: @escaping @Sendable (Int64) -> Void,
+        completion: @escaping @Sendable (URL?, URLResponse?, (any Error)?) -> Void
     ) {
-        progress(totalBytesWritten)
+        let task = URLSession.shared.downloadTask(with: url) { location, response, error in
+            self.finish()
+            completion(location, response, error)
+        }
+        // Not `task.progress`: its unit counts stall during large downloads.
+        let observation = task.observe(\.countOfBytesReceived) { task, _ in
+            progress(task.countOfBytesReceived)
+        }
+        let cancelled = lock.withLock {
+            self.task = task
+            self.observation = observation
+            return isCancelled
+        }
+        if cancelled { task.cancel() }
+        task.resume()
     }
 
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        // Handled by the async `download(from:delegate:)` call.
+    func cancel() {
+        let task = lock.withLock {
+            isCancelled = true
+            return self.task
+        }
+        task?.cancel()
+    }
+
+    private func finish() {
+        let observation = lock.withLock {
+            defer { self.observation = nil; self.task = nil }
+            return self.observation
+        }
+        observation?.invalidate()
     }
 }

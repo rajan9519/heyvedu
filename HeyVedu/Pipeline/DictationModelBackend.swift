@@ -144,7 +144,12 @@ final class DictationModelBackend: CleanupBackend {
         return try await Self.model.ensureDownloaded { [weak self] fraction in
             Task { @MainActor in
                 // Progress tasks can land after the download finished; never step back.
-                guard let self, self.loadTask != nil, self.state == .idle || self.state.isDownloading else { return }
+                guard let self, self.loadTask != nil else { return }
+                switch self.state {
+                case .idle: break
+                case .downloading(let current) where fraction > current: break
+                default: return
+                }
                 self.setState(.downloading(fraction))
             }
         }
@@ -165,14 +170,14 @@ final class DictationModelBackend: CleanupBackend {
     }
 
     /// Cleans one chunk. An empty result is valid: filler-only input ("um") has no
-    /// written form. The model was trained on a fixed prompt, so `instructions` (and with
-    /// them the vocabulary) are not used.
+    /// written form. The model was trained on a fixed prompt, so `instructions` are not used.
     func clean(_ chunk: String, instructions: String) async throws -> String {
         guard let container else {
             throw BackendError.notReady(availability().reason ?? "Vedu Scribe isn't loaded")
         }
 
-        let transcript = Self.sanitize(chunk)
+        // Lowercased so the model restores casing itself rather than trusting the ASR's.
+        let transcript = Self.sanitize(chunk).lowercased()
         let input = UserInput(
             chat: [.system(Self.systemPrompt), .user(transcript)],
             // Trained with thinking disabled (empty think block in the prompt).
