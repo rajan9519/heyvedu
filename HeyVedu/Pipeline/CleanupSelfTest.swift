@@ -1,7 +1,7 @@
 #if DEBUG
 import Foundation
 
-/// Debug harness: `HeyVedu.app/Contents/MacOS/HeyVedu --cleanup-selftest [engine] [vocab]`
+/// Debug harness: `HeyVedu.app/Contents/MacOS/HeyVedu --cleanup-selftest [engine]`
 /// runs fixed phrases through the cleaner, prints the results, and exits. `engine` is a
 /// `TextCleaner.Engine` raw value (`dictationModel`, `appleIntelligence`); Vedu Scribe by
 /// default. Only these canned phrases are printed — never real dictations.
@@ -26,14 +26,6 @@ enum CleanupSelfTest {
         "so the plan is we uh we move the launch to next week because the the design review slipped and um marketing needs another two days actually make that three days to finish the assets",
     ]
 
-    /// Vocabulary cases: ASR-style mis-hearings of listed terms.
-    static let vocabulary = ["GitHub", "Kubernetes", "Parakeet", "Rajan"]
-    static let vocabularyPhrases = [
-        "i pushed the git hub actions changes to cooper netties",
-        "rajan said the para keet model is fast",
-        "can you ask rajan about the release",
-    ]
-
     static func run() async {
         let cleaner = TextCleaner()
         let savedEngine = cleaner.engine
@@ -53,22 +45,12 @@ enum CleanupSelfTest {
             print("\(cleaner.engine.title) ready after \(started.duration(to: .now))")
         }
         print("Engine: \(cleaner.engine.title) · availability: \(cleaner.availability)")
-        // `vocab` runs only the vocabulary cases.
-        for phrase in CommandLine.arguments.contains("vocab") ? [] : phrases {
+        for phrase in phrases {
             cleaner.prepare()
             let started = ContinuousClock.now
             let result = await cleaner.clean(phrase)
             let elapsed = ContinuousClock.now - started
             report(phrase, result, elapsed)
-        }
-
-        print("\n--- with vocabulary: \(vocabulary.joined(separator: ", ")) ---")
-        cleaner.vocabulary = vocabulary
-        for phrase in vocabularyPhrases {
-            cleaner.prepare()
-            let started = ContinuousClock.now
-            let result = await cleaner.clean(phrase)
-            report(phrase, result, ContinuousClock.now - started)
         }
     }
 

@@ -20,7 +20,6 @@ connection only for the initial build and model downloads.
 - Offers local cleanup with Vedu Scribe, HeyVedu's own model (the default), or
   Apple Intelligence.
 - Lets you select any connected microphone and follows device changes.
-- Supports a local preferred-spellings vocabulary for Apple Intelligence cleanup.
 - Keeps no dictation history and never writes recorded audio to disk.
 
 For example:
@@ -145,23 +144,12 @@ Click the menu-bar icon to configure the app.
 
 | Engine | Where it runs | Notes |
 | --- | --- | --- |
-| **Vedu Scribe** | On your Mac | Default. HeyVedu's own cleanup model, a Qwen3.5-0.8B fine-tune ([model card](https://huggingface.co/heyvedu/vedu-scribe-0.8b)). English-only; downloads about 560 MB on first use. Does not use the vocabulary list. |
+| **Vedu Scribe** | On your Mac | Default. HeyVedu's own cleanup model, a Qwen3.5-0.8B fine-tune ([model card](https://huggingface.co/heyvedu/vedu-scribe-0.8b)). English-only; downloads about 560 MB on first use. |
 | **Apple Intelligence** | On your Mac | Uses Apple's on-device Foundation Model. Falls back to the raw transcript if the model is unavailable. |
 
 Turn off **Clean Up Transcripts** to paste the raw, locally generated transcript.
 If a cleanup engine fails or rejects a result, HeyVedu pastes the raw
 transcript instead and tells you why.
-
-### Vocabulary
-
-Choose **Edit Vocabulary…** to add preferred spellings for names, products, and
-jargon. The list is stored locally at:
-
-```text
-~/Library/Application Support/HeyVedu/vocabulary.json
-```
-
-Vocabulary is used by Apple Intelligence. Vedu Scribe currently ignores it.
 
 ### Microphone
 
@@ -183,7 +171,6 @@ Microphone → in-memory audio → on-device Parakeet → on-device Vedu Scribe 
 | Recorded audio | Memory only; stays on-device | Memory only; stays on-device |
 | Speech recognition | On-device | On-device |
 | Transcript cleanup | On-device | On-device |
-| Preferred vocabulary | Local file; unused by Vedu Scribe | Local file and on-device prompt |
 | Dictation history | Not stored | Not stored |
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
@@ -192,8 +179,8 @@ half a second. Clipboard managers are asked to treat this entry as transient,
 but their behavior is outside the app's control.
 
 Debug builds write timing and error diagnostics to
-`~/Library/Logs/HeyVedu/debug.log`. Audio, transcripts, vocabulary, and
-typed keys are not written to this log.
+`~/Library/Logs/HeyVedu/debug.log`. Audio, transcripts, and typed
+keys are not written to this log.
 
 ## Troubleshooting
 
@@ -258,7 +245,6 @@ and deletes the old one.
   paste
 - Restoring the clipboard may not preserve lazily provided clipboard content
   from every application
-- Vedu Scribe does not use custom vocabulary
 
 ## License
 

@@ -4,7 +4,6 @@ struct MenuContent: View {
     let controller: DictationController
     let updates: UpdateController
     let showWelcomeGuide: () -> Void
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Text(controller.statusText)
@@ -38,12 +37,6 @@ struct MenuContent: View {
                     Text("\(reason) — pasting raw transcripts")
                 }
             }
-        }
-
-        Button("Edit Vocabulary…") {
-            openWindow(id: VocabularyWindow.id)
-            // Menu-bar apps aren't active by default; bring the window to the front.
-            NSApp.activate()
         }
 
         Divider()

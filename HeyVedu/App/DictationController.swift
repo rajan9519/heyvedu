@@ -16,7 +16,6 @@ final class DictationController {
     let devices = AudioDeviceManager()
     let speechModel = SpeechModel()
     let cleaner = TextCleaner()
-    let vocabulary = VocabularyStore()
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
@@ -102,7 +101,6 @@ final class DictationController {
         speechModel.onReady = { [weak self] in self?.showLaunchHintIfNeeded() }
         speechModel.prepare()
         cleaner.onDownloadedModelReady = { [weak self] in self?.cleanupModelReady() }
-        cleaner.vocabulary = vocabulary.terms
         cleaner.warmUp()
 
         permissions.onChange = { [weak self] in self?.permissionsChanged() }
@@ -218,7 +216,6 @@ final class DictationController {
         // off the event-tap callback so launching a CLI cannot make the tap time out.
         Task { [weak self] in
             guard let self, self.status == .recording else { return }
-            self.cleaner.vocabulary = self.vocabulary.terms
             self.cleaner.prepare()
         }
         Task {
@@ -284,7 +281,6 @@ final class DictationController {
                 if cleaner.isEnabled {
                     hud.showProcessing("Cleaning…")
                     let started = ContinuousClock.now
-                    cleaner.vocabulary = vocabulary.terms
                     let result = await cleaner.clean(trimmed)
                     output = result.text
                     fallbackReason = result.fallbackReason

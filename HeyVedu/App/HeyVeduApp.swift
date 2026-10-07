@@ -18,12 +18,6 @@ struct HeyVeduApp: App {
                     .accessibilityLabel("HeyVedu: \(appDelegate.controller.statusText)")
             }
         }
-
-        Window("Vocabulary", id: VocabularyWindow.id) {
-            VocabularyView(store: appDelegate.controller.vocabulary)
-        }
-        .windowResizability(.contentMinSize)
-        .defaultLaunchBehavior(.suppressed)
     }
 
     /// MenuBarExtra labels ignore `.resizable()`/`.frame()` and draw an image at its point
@@ -35,10 +29,6 @@ struct HeyVeduApp: App {
         image.isTemplate = true
         return image
     }()
-}
-
-enum VocabularyWindow {
-    static let id = "vocabulary"
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
