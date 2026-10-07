@@ -6,9 +6,12 @@ struct HeyVeduApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(controller: appDelegate.controller, updates: appDelegate.updates) {
-                appDelegate.onboarding.show()
-            }
+            MenuContent(
+                controller: appDelegate.controller,
+                updates: appDelegate.updates,
+                showWelcomeGuide: { appDelegate.onboarding.show() },
+                recordShortcut: { appDelegate.hotkeyRecorder.show() }
+            )
         } label: {
             if appDelegate.controller.menuBarSymbol == "mic" {
                 Image(nsImage: Self.menuBarMark)
@@ -35,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let controller = DictationController()
     let updates = UpdateController()
     lazy var onboarding = OnboardingWindowController(controller: controller)
+    lazy var hotkeyRecorder = HotkeyRecorderWindowController(controller: controller)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         #if DEBUG

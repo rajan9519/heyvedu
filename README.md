@@ -1,6 +1,7 @@
 # HeyVedu
 
-Private, push-to-talk dictation for macOS. Hold **Control + Option**, speak, and
+Private, push-to-talk dictation for macOS. Hold **Control + Option** (or a
+shortcut you choose), speak, and
 release to insert polished text into the app you are using.
 
 Speech recognition and the default Vedu Scribe text cleanup run on your Mac. Audio
@@ -12,7 +13,9 @@ connection only for the initial build and model downloads.
 
 - Dictates into almost any app that accepts pasted text.
 - Starts listening while you hold **Control + Option** and stops when you
-  release it.
+  release it. You can pick another shortcut, such as fn or the right ⌘ key.
+- Double-tap the shortcut to dictate hands-free, then press it once more to
+  finish.
 - Transcribes English speech locally with NVIDIA Parakeet TDT 0.6B v3 through
   FluidAudio and Core ML.
 - Removes fillers and false starts, applies self-corrections, and fixes
@@ -136,9 +139,31 @@ seconds, another key pressed with the chord, or an added modifier is treated as
 a keyboard shortcut and discarded. New dictations are ignored while the
 previous one is being processed.
 
+### Hands-free dictation
+
+For longer dictation, double-tap the shortcut instead of holding it. The
+floating indicator shows a lock while HeyVedu keeps listening. Press the
+shortcut once more to finish, or press **Escape** to cancel. You can type while
+it listens; only Escape cancels. A hands-free recording stops by itself after
+10 minutes. Turn off **Double-Tap for Hands-Free** in the menu to disable it.
+
 ## Settings
 
 Click the menu-bar icon to configure the app.
+
+### Dictation shortcut
+
+The default is **⌃⌥**. To change it, choose **Dictation Shortcut…** in the
+menu, hold the modifier keys you want, and let go. Shortcuts use modifier keys
+only. A single key must be fn or a right-hand ⌘, ⌥ or ⌃, because the left-hand
+keys start too many other shortcuts.
+
+A shortcut recorded with any right-hand key only responds to the exact keys you
+held. For example, **Right ⌥⌘** ignores the left ⌥ and ⌘ keys. A shortcut
+recorded with left-hand keys only works with either side's keys.
+
+macOS acts on the fn (🌐) key itself. If you choose fn, set **System Settings
+→ Keyboard → Press 🌐 key to** to **Do Nothing**. The menu links there until you do.
 
 ### Cleanup engines
 
@@ -240,7 +265,7 @@ and deletes the old one.
 - English dictation only
 - Apple silicon only
 - Signed releases require a Developer ID certificate and notarization credentials
-- The global hotkey is fixed to **Control + Option**
+- Shortcuts are modifier keys only; a letter or Space can't be part of one
 - Text insertion relies on **Command + V** and may not work in fields that block
   paste
 - Restoring the clipboard may not preserve lazily provided clipboard content

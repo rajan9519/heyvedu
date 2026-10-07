@@ -19,10 +19,33 @@ final class DictationController {
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
+    /// The current recording continues without holding the hotkey.
+    private(set) var isHandsFree = false
+
+    var hotkey: Hotkey = .saved {
+        didSet {
+            hotkey.save()
+            hotkeyMonitor.hotkey = hotkey
+        }
+    }
+
+    /// Double-tap the hotkey to keep recording without holding it.
+    var handsFreeEnabled = UserDefaults.standard.object(forKey: DictationController.handsFreeKey) as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(handsFreeEnabled, forKey: Self.handsFreeKey)
+            hotkeyMonitor.handsFreeEnabled = handsFreeEnabled
+        }
+    }
+
+    /// Stops listening for the hotkey, e.g. while the user records a new one.
+    var hotkeySuspended: Bool {
+        get { hotkeyMonitor.isSuspended }
+        set { hotkeyMonitor.isSuspended = newValue }
+    }
     /// Dictations pasted this session; the onboarding practice step watches it.
     private(set) var completedDictations = 0
 
-    @ObservationIgnored private let hotkey = HotkeyMonitor()
+    @ObservationIgnored private let hotkeyMonitor = HotkeyMonitor()
     @ObservationIgnored private let recorder = AudioRecorder()
     @ObservationIgnored private let hud = RecordingHUD()
     @ObservationIgnored private let inserter = TextInserter()
@@ -39,8 +62,12 @@ final class DictationController {
     @ObservationIgnored private var downloadNoticeShown = false
     /// The cleanup model finished downloading mid-dictation; announce it once that's done.
     @ObservationIgnored private var cleanupReadyNoticePending = false
+    /// Ends a hands-free recording that runs past `handsFreeLimit`.
+    @ObservationIgnored private var handsFreeLimitTask: Task<Void, Never>?
 
     private static let minimumDuration: TimeInterval = 0.2
+    private static let handsFreeLimit: Duration = .seconds(10 * 60)
+    private static let handsFreeKey = "handsFreeEnabled"
     private let logger = Logger(subsystem: "com.heyvedu.app", category: "Dictation")
 
     // MARK: - Menu bar presentation
@@ -75,7 +102,7 @@ final class DictationController {
             case .ready: break
             }
             if devices.inputDevices.isEmpty { return "No microphone connected" }
-            return "Hold ⌃⌥ to dictate"
+            return "Hold \(hotkey.symbols) to dictate"
         }
     }
 
@@ -86,7 +113,9 @@ final class DictationController {
     func start(requestPermissions: Bool = true) {
         devices.start()
 
-        hotkey.onEvent = { [weak self] event in self?.handle(event) }
+        hotkeyMonitor.hotkey = hotkey
+        hotkeyMonitor.handsFreeEnabled = handsFreeEnabled
+        hotkeyMonitor.onEvent = { [weak self] event in self?.handle(event) }
         recorder.onLevel = { [weak self] level in self?.hud.push(level: level) }
         recorder.onFirstAudio = { [weak self] in
             self?.audioLive = true
@@ -121,7 +150,7 @@ final class DictationController {
         let shown = defaults.integer(forKey: Self.launchHintsShownKey)
         guard shown < Self.launchHintCount, status == .idle, permissions.allGranted, hotkeyAvailable else { return }
         defaults.set(shown + 1, forKey: Self.launchHintsShownKey)
-        hud.flash("Hold ⌃ Control + ⌥ Option anywhere to dictate", for: .seconds(3))
+        hud.flash("Hold \(hotkey.spokenName) anywhere to dictate", for: .seconds(3))
     }
 
     private static let launchHintsShownKey = "launchHintsShown"
@@ -129,12 +158,12 @@ final class DictationController {
 
     private func permissionsChanged() {
         if permissions.accessibilityGranted {
-            hotkeyAvailable = hotkey.start()
+            hotkeyAvailable = hotkeyMonitor.start()
             if !hotkeyAvailable { logger.error("Event tap creation failed despite Accessibility trust") }
         } else {
             DebugTrace.write("controller: accessibility lost")
             logger.notice("Accessibility trust lost; stopping hotkey")
-            hotkey.stop()
+            hotkeyMonitor.stop()
             hotkeyAvailable = false
         }
     }
@@ -168,11 +197,39 @@ final class DictationController {
             } else if let pressFailure {
                 hud.flash(pressFailure)
             }
+        case .locked:
+            pressActivated = true
+            if status == .recording {
+                isHandsFree = true
+                hud.showRecording(notice: pressNotice ?? handsFreeHint, listening: audioLive, handsFree: true)
+                handsFreeLimitTask = Task { [weak self] in
+                    try? await Task.sleep(for: Self.handsFreeLimit)
+                    guard !Task.isCancelled else { return }
+                    DebugTrace.write("controller: hands-free limit reached")
+                    self?.finishRecording()
+                }
+            } else {
+                // Busy or unable to record: don't let the next press count as "finish".
+                hotkeyMonitor.reset()
+                hud.flash(pressFailure ?? "Still processing the last dictation")
+            }
         case .released:
             finishRecording()
         case .cancelled:
             cancelRecording()
         }
+    }
+
+    private var handsFreeHint: String {
+        "Hands-free — press \(hotkey.symbols) to finish, Esc to cancel"
+    }
+
+    /// Clears hands-free state when a recording ends for any reason.
+    private func endHandsFree() {
+        handsFreeLimitTask?.cancel()
+        handsFreeLimitTask = nil
+        if isHandsFree { hotkeyMonitor.reset() }
+        isHandsFree = false
     }
 
     /// Returns immediately; the engine starts on the recorder's background queue so the
@@ -235,6 +292,7 @@ final class DictationController {
 
     private func cancelRecording() {
         DebugTrace.write("controller: cancel")
+        endHandsFree()
         if status == .recording {
             status = .idle
             cleaner.discardPrepared()
@@ -245,6 +303,7 @@ final class DictationController {
 
     private func finishRecording() {
         guard status == .recording else { return }
+        endHandsFree()
         status = .processing
         hud.showProcessing("Transcribing…")
 

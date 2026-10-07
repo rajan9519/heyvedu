@@ -2,39 +2,76 @@ import AppKit
 import CoreGraphics
 import os
 
-/// Push-to-talk detection for Control+Option via a session event tap.
+/// Push-to-talk detection for the configured modifier hotkey via a session event tap.
 ///
 /// Lifecycle of one press:
-/// - `.pressed`   chord went down: start the mic now so device warm-up overlaps the hold.
-/// - `.activated` chord held past `activationDelay`: this is a real dictation.
-/// - `.released`  chord released after activation: finish and transcribe.
+/// - `.pressed`   hotkey went down: start the mic now so device warm-up overlaps the hold.
+/// - `.activated` hotkey held past `activationDelay`: this is a real dictation.
+/// - `.released`  hotkey released after activation, or tapped again while locked: finish
+///                and transcribe.
 /// - `.cancelled` released early, another key/modifier pressed, or Esc: discard.
+///
+/// With hands-free mode on, a quick tap followed by a second press within
+/// `doubleTapWindow` sends `.locked` instead: recording continues without holding the
+/// keys until the next press of the hotkey (or Esc to cancel).
 final class HotkeyMonitor {
     enum Event {
         case pressed
         case activated
+        case locked
         case released
         case cancelled
     }
 
     var onEvent: ((Event) -> Void)?
 
+    var hotkey: Hotkey = .default {
+        didSet {
+            guard hotkey != oldValue else { return }
+            cancel(reason: "hotkey changed")
+            phase = .idle
+        }
+    }
+
+    var handsFreeEnabled = true
+
+    /// Ignores all input while true, e.g. while the user records a new hotkey.
+    var isSuspended = false {
+        didSet {
+            guard isSuspended, !oldValue else { return }
+            cancel(reason: "suspended")
+            phase = .idle
+        }
+    }
+
     private enum Phase {
         case idle
+        /// Held, not yet past the activation delay.
         case arming
+        /// Held past the activation delay (push-to-talk).
         case active
+        /// Released quickly; waiting briefly for a second press.
+        case tapped
+        /// Second press of a double-tap is still held.
+        case lockHeld
+        /// Hands-free recording; the next press finishes it.
+        case locked
+        /// Finished on a press; waiting for all of the hotkey's keys to come up before
+        /// arming again.
+        case awaitingRelease
     }
 
     private static let activationDelay: Duration = .milliseconds(250)
+    private static let doubleTapWindow: Duration = .milliseconds(350)
     private static let escapeKeyCode: Int64 = 53
-    private static let chordFlags: CGEventFlags = [.maskControl, .maskAlternate]
-    private static let trackedFlags: CGEventFlags = [.maskControl, .maskAlternate, .maskCommand, .maskShift]
 
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var phase: Phase = .idle
-    private var activationTask: Task<Void, Never>?
+    private var timer: Task<Void, Never>?
     private var swallowEscapeKeyUp = false
+    /// Whether the hotkey was held as of the latest modifier change.
+    private var hotkeyHeld = false
     private let logger = Logger(subsystem: "com.heyvedu.app", category: "Hotkey")
 
     /// Returns false if the tap could not be created (usually missing Accessibility trust).
@@ -66,11 +103,20 @@ final class HotkeyMonitor {
     }
 
     func stop() {
-        if phase != .idle { cancel(reason: "monitor stopped") }
+        cancel(reason: "monitor stopped")
+        phase = .idle
         if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
         if let runLoopSource { CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes) }
         tap = nil
         runLoopSource = nil
+    }
+
+    /// Forgets the current press without sending an event, for when a recording ended or
+    /// was refused for some other reason (so a later press isn't taken as "finish").
+    func reset() {
+        timer?.cancel()
+        timer = nil
+        phase = hotkeyHeld ? .awaitingRelease : .idle
     }
 
     /// Returns true if the event should be swallowed.
@@ -83,19 +129,29 @@ final class HotkeyMonitor {
             return false
 
         case .flagsChanged:
-            handleFlags(flags)
+            guard !isSuspended else { return false }
+            handleFlags(flags.rawValue)
             return false
 
         case .keyDown:
-            guard phase != .idle else { return false }
+            guard !isSuspended else { return false }
             let isEscape = keyCode == Self.escapeKeyCode
+            switch phase {
+            case .idle, .awaitingRelease:
+                return false
+            case .locked:
+                // Typing while hands-free is fine; only Esc cancels.
+                guard isEscape else { return false }
+            case .arming, .active, .tapped, .lockHeld:
+                break
+            }
             // Key identity is deliberately not logged beyond Esc vs other.
             cancel(reason: isEscape ? "escape" : "other key pressed")
             if isEscape {
                 swallowEscapeKeyUp = true
                 return true
             }
-            // Any other key means Control+Option was part of a shortcut; let it through.
+            // Any other key means the hotkey was part of a shortcut; let it through.
             return false
 
         case .keyUp:
@@ -110,19 +166,33 @@ final class HotkeyMonitor {
         }
     }
 
-    private func handleFlags(_ flags: CGEventFlags) {
-        let held = flags.intersection(Self.trackedFlags)
-        let chordHeld = held == Self.chordFlags
+    private func handleFlags(_ rawFlags: UInt64) {
+        let held = hotkey.isHeld(in: rawFlags)
+        hotkeyHeld = held
 
         switch phase {
         case .idle:
-            if chordHeld { arm() }
+            if held { arm() }
+
         case .arming:
-            if !chordHeld { cancel(reason: "released or modifier changed before activation") }
+            if held { return }
+            if handsFreeEnabled && !hotkey.isPartOfOtherShortcut(in: rawFlags) {
+                // A quick tap: keep the mic warm in case a second press locks recording.
+                timer?.cancel()
+                phase = .tapped
+                timer = Task { [weak self] in
+                    try? await Task.sleep(for: Self.doubleTapWindow)
+                    guard let self, !Task.isCancelled, self.phase == .tapped else { return }
+                    self.cancel(reason: "single tap")
+                }
+            } else {
+                cancel(reason: "released or modifier changed before activation")
+            }
+
         case .active:
-            if chordHeld { return }
-            // Extra modifier added on top of the chord → it's a shortcut, not a release.
-            if held.isSuperset(of: Self.chordFlags) {
+            if held { return }
+            // Extra modifier added on top of the hotkey → it's a shortcut, not a release.
+            if hotkey.isPartOfOtherShortcut(in: rawFlags) {
                 cancel(reason: "extra modifier added")
             } else {
                 DebugTrace.write("hotkey: released")
@@ -130,13 +200,35 @@ final class HotkeyMonitor {
                 phase = .idle
                 onEvent?(.released)
             }
+
+        case .tapped:
+            guard held else { return }
+            timer?.cancel()
+            timer = nil
+            phase = .lockHeld
+            DebugTrace.write("hotkey: locked")
+            logger.notice("Locked for hands-free recording")
+            onEvent?(.locked)
+
+        case .lockHeld:
+            if !held { phase = .locked }
+
+        case .locked:
+            guard held else { return }
+            DebugTrace.write("hotkey: finished hands-free")
+            logger.notice("Hands-free recording finished")
+            phase = .awaitingRelease
+            onEvent?(.released)
+
+        case .awaitingRelease:
+            if Hotkey.Modifiers(rawFlags: rawFlags).isDisjoint(with: hotkey.modifiers) { phase = .idle }
         }
     }
 
     private func arm() {
         phase = .arming
         onEvent?(.pressed)
-        activationTask = Task { [weak self] in
+        timer = Task { [weak self] in
             try? await Task.sleep(for: Self.activationDelay)
             guard let self, !Task.isCancelled, self.phase == .arming else { return }
             self.phase = .active
@@ -147,13 +239,17 @@ final class HotkeyMonitor {
     }
 
     private func cancel(reason: String) {
-        activationTask?.cancel()
-        activationTask = nil
-        guard phase != .idle else { return }
-        DebugTrace.write("hotkey: cancelled (\(reason))")
-        logger.notice("Cancelled: \(reason, privacy: .public)")
-        phase = .idle
-        onEvent?(.cancelled)
+        timer?.cancel()
+        timer = nil
+        switch phase {
+        case .idle, .awaitingRelease:
+            return
+        case .arming, .active, .tapped, .lockHeld, .locked:
+            DebugTrace.write("hotkey: cancelled (\(reason))")
+            logger.notice("Cancelled: \(reason, privacy: .public)")
+            phase = hotkeyHeld ? .awaitingRelease : .idle
+            onEvent?(.cancelled)
+        }
     }
 }
 

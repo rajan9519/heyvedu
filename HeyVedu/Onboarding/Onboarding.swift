@@ -68,8 +68,8 @@ private struct OnboardingView: View {
         VStack(spacing: 0) {
             Group {
                 switch step {
-                case .welcome: WelcomeStep()
-                case .permissions: PermissionsStep(permissions: controller.permissions)
+                case .welcome: WelcomeStep(hotkey: controller.hotkey)
+                case .permissions: PermissionsStep(permissions: controller.permissions, hotkey: controller.hotkey)
                 case .model: ModelStep(model: controller.speechModel)
                 case .practice: PracticeStep(controller: controller)
                 }
@@ -122,6 +122,8 @@ private struct OnboardingView: View {
 // MARK: - Steps
 
 private struct WelcomeStep: View {
+    let hotkey: Hotkey
+
     var body: some View {
         VStack(spacing: 18) {
             Image("BrandMark")
@@ -136,9 +138,7 @@ private struct WelcomeStep: View {
 
             HStack(spacing: 10) {
                 Text("Hold")
-                Keycap(symbol: "⌃", name: "control", pressed: false)
-                Text("+")
-                Keycap(symbol: "⌥", name: "option", pressed: false)
+                HotkeyKeycaps(hotkey: hotkey, heldFlags: 0)
                 Text("speak, then let go.")
             }
             .font(.title3)
@@ -154,6 +154,7 @@ private struct WelcomeStep: View {
 
 private struct PermissionsStep: View {
     let permissions: PermissionsManager
+    let hotkey: Hotkey
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -171,7 +172,7 @@ private struct PermissionsStep: View {
             PermissionRow(
                 icon: "accessibility",
                 title: "Accessibility",
-                detail: "To notice ⌃⌥ in any app and paste the text where your cursor is. In System Settings, switch HeyVedu on, then come back here.",
+                detail: "To notice \(hotkey.symbols) in any app and paste the text where your cursor is. In System Settings, switch HeyVedu on, then come back here.",
                 granted: permissions.accessibilityGranted,
                 grant: permissions.requestAccessibility
             )
@@ -264,7 +265,7 @@ private struct PracticeStep: View {
     let controller: DictationController
 
     @State private var text = ""
-    @State private var heldFlags: NSEvent.ModifierFlags = []
+    @State private var heldFlags: UInt64 = 0
     @State private var startingCount = 0
     @State private var monitor: Any?
     @FocusState private var editorFocused: Bool
@@ -277,13 +278,11 @@ private struct PracticeStep: View {
                 title: succeeded ? "You're all set 🎉" : "Try it",
                 subtitle: succeeded
                     ? "That's all there is to it. Dictate into any app the same way."
-                    : "Click in the box, hold both keys, say “Hello, this is my first dictation”, then let go."
+                    : "Click in the box, hold \(controller.hotkey.symbols), say “Hello, this is my first dictation”, then let go."
             )
 
             HStack(spacing: 10) {
-                Keycap(symbol: "⌃", name: "control", pressed: heldFlags.contains(.control))
-                Text("+").font(.title2).foregroundStyle(.secondary)
-                Keycap(symbol: "⌥", name: "option", pressed: heldFlags.contains(.option))
+                HotkeyKeycaps(hotkey: controller.hotkey, heldFlags: heldFlags)
                 Spacer()
                 statusLine
             }
@@ -299,14 +298,17 @@ private struct PracticeStep: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 tip("escape", "Press Esc while holding to cancel a dictation.")
-                tip("command", "Pressing another key with ⌃⌥ still works as a normal shortcut.")
+                if controller.handsFreeEnabled {
+                    tip("lock", "Double-tap \(controller.hotkey.symbols) to dictate hands-free, then press it again to finish.")
+                }
+                tip("command", "Pressing another key with \(controller.hotkey.symbols) still works as a normal shortcut.")
             }
         }
         .onAppear {
             startingCount = controller.completedDictations
             editorFocused = true
             monitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
-                heldFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                heldFlags = UInt64(event.modifierFlags.rawValue)
                 return event
             }
         }
@@ -368,7 +370,22 @@ private struct StepHeader: View {
     }
 }
 
-private struct Keycap: View {
+/// The hotkey's keys as keycaps joined by "+", lit while held.
+struct HotkeyKeycaps: View {
+    let hotkey: Hotkey
+    let heldFlags: UInt64
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(Array(hotkey.keycaps.enumerated()), id: \.offset) { index, key in
+                if index > 0 { Text("+").font(.title2).foregroundStyle(.secondary) }
+                Keycap(symbol: key.symbol, name: key.name, pressed: key.isPressed(in: heldFlags))
+            }
+        }
+    }
+}
+
+struct Keycap: View {
     let symbol: String
     let name: String
     let pressed: Bool

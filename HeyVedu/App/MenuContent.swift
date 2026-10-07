@@ -4,6 +4,7 @@ struct MenuContent: View {
     let controller: DictationController
     let updates: UpdateController
     let showWelcomeGuide: () -> Void
+    let recordShortcut: () -> Void
 
     var body: some View {
         Text(controller.statusText)
@@ -38,6 +39,14 @@ struct MenuContent: View {
                 }
             }
         }
+
+        Divider()
+
+        Button("Dictation Shortcut: \(controller.hotkey.symbols)…", action: recordShortcut)
+        if controller.hotkey.modifiers == .function, Hotkey.systemUsesFunctionKey {
+            Button("Set “Press 🌐 key to” to Do Nothing…") { Hotkey.openKeyboardSettings() }
+        }
+        Toggle("Double-Tap for Hands-Free", isOn: handsFreeEnabled)
 
         Divider()
 
@@ -76,6 +85,13 @@ struct MenuContent: View {
         Binding(
             get: { controller.cleaner.engine },
             set: { controller.cleaner.engine = $0 }
+        )
+    }
+
+    private var handsFreeEnabled: Binding<Bool> {
+        Binding(
+            get: { controller.handsFreeEnabled },
+            set: { controller.handsFreeEnabled = $0 }
         )
     }
 

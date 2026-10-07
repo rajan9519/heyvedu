@@ -15,6 +15,7 @@ final class HUDModel {
 
     var phase: Phase = .waitingForAudio
     var notice: String?
+    var handsFree = false
     var levels = [Float](repeating: 0, count: HUDModel.barCount)
 
     func push(_ level: Float) {
@@ -37,8 +38,9 @@ final class RecordingHUD {
     private static let panelSize = NSSize(width: 320, height: 72)
     private static let bottomMargin: CGFloat = 56
 
-    func showRecording(notice: String?, listening: Bool) {
+    func showRecording(notice: String?, listening: Bool, handsFree: Bool = false) {
         model.notice = notice
+        model.handsFree = handsFree
         model.phase = listening ? .listening : .waitingForAudio
         present()
     }
@@ -54,12 +56,14 @@ final class RecordingHUD {
 
     func showProcessing(_ text: String) {
         model.notice = nil
+        model.handsFree = false
         model.phase = .processing(text)
         present()
     }
 
     func flash(_ message: String, for duration: Duration = .seconds(1.5)) {
         model.notice = nil
+        model.handsFree = false
         model.phase = .message(message)
         present()
         hideTask = Task { [weak self] in
@@ -149,7 +153,7 @@ private struct HUDView: View {
         case .waitingForAudio:
             Image(systemName: "mic").foregroundStyle(.secondary)
         case .listening:
-            Image(systemName: "mic.fill").foregroundStyle(.red)
+            Image(systemName: model.handsFree ? "lock.fill" : "mic.fill").foregroundStyle(.red)
         case .processing:
             ProgressView().controlSize(.small)
         case .message:
