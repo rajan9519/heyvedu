@@ -48,6 +48,12 @@ Download the latest signed and notarized release from
 [app.heyvedu.com/download](https://app.heyvedu.com/download), open the disk image, and
 drag HeyVedu to Applications. The app checks for updates and installs them itself.
 
+Or install it with [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask rajan9519/tap/heyvedu
+```
+
 ## Install from source
 
 Clone or download this repository, then run:

@@ -164,6 +164,16 @@ Check it: `curl -sI https://app.heyvedu.com/download` returns `302` with a `loca
 latest DMG. If the appcast is missing or unreadable, it redirects to the website instead.
 To change the Worker later, paste the updated file into **Edit code** again.
 
+## Homebrew
+
+`brew install --cask rajan9519/tap/heyvedu` installs from the
+[rajan9519/homebrew-tap](https://github.com/rajan9519/homebrew-tap) repository. A scheduled
+GitHub Action there reads `updates/appcast.xml` every six hours and bumps the cask's version
+and SHA-256 to the DMG it names, so nothing needs doing per release. To publish a release to
+Homebrew sooner, run the **Update HeyVedu cask** workflow by hand in that repository's
+Actions tab. Because the cask points at `updates/HeyVedu-VERSION-arm64.dmg`, keep the
+previous DMG in the bucket until the cask has moved on, or `brew install` fails its download.
+
 How the app updates:
 
 - It checks the feed about once a day, plus whenever the user chooses **Check for
