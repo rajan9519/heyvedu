@@ -1,0 +1,4 @@
+// Copy to DebugSigning.local.xcconfig. Any certificate works ("Apple Development" or
+// "Developer ID Application"); what matters is that it stays the same between builds.
+CODE_SIGN_IDENTITY = Developer ID Application
+DEVELOPMENT_TEAM = YOUR_TEAM_ID

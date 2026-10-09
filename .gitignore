@@ -5,3 +5,5 @@ xcuserdata/
 *.xcuserstate
 dist/
 Config/release.env
+Config/*.local.xcconfig
+.claude/

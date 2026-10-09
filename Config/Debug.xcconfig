@@ -1,0 +1,9 @@
+// Debug builds are "HeyVedu Dev" (com.heyvedu.app.dev), so they never collide with an
+// installed HeyVedu. They are ad-hoc signed by default; macOS then forgets the Accessibility
+// and Microphone grants after every rebuild. To keep them, sign with your own certificate:
+//   cp Config/DebugSigning.local.xcconfig.example Config/DebugSigning.local.xcconfig
+// and fill in your identity and Team ID (the file is gitignored).
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+
+#include? "DebugSigning.local.xcconfig"

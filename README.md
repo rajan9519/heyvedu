@@ -56,17 +56,27 @@ brew install --cask rajan9519/tap/heyvedu
 
 ## Install from source
 
-Clone or download this repository, then run:
+Open `HeyVedu.xcodeproj` in Xcode, select the **HeyVedu** scheme and press ⌘R.
+Xcode may ask you to trust the pinned MLX build-tool plugin; review the prompt and
+choose **Trust & Enable** to continue.
+
+Debug builds are named **HeyVedu Dev** (bundle ID `com.heyvedu.app.dev`) and run
+from Xcode's DerivedData, so they never replace or collide with an installed
+HeyVedu. They ask for Microphone and Accessibility separately from the installed app.
+
+Debug builds are ad-hoc signed unless you configure a certificate, and macOS forgets
+an ad-hoc app's Accessibility grant after every rebuild. To keep the grants across
+rebuilds, sign Debug builds with any certificate you own:
+
+```bash
+cp Config/DebugSigning.local.xcconfig.example Config/DebugSigning.local.xcconfig
+# set CODE_SIGN_IDENTITY and DEVELOPMENT_TEAM; the file is gitignored
+```
+
+To build and launch the same Debug app without Xcode's UI:
 
 ```bash
 ./scripts/run.sh
-```
-
-The script resolves the pinned Swift packages, builds a Debug app into `build/`,
-and launches:
-
-```text
-build/Build/Products/Debug/HeyVedu.app
 ```
 
 If `xcode-select` points to Command Line Tools instead of Xcode, set
@@ -75,10 +85,6 @@ If `xcode-select` points to Command Line Tools instead of Xcode, set
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run.sh
 ```
-
-You can also open `HeyVedu.xcodeproj` in Xcode, select the
-**HeyVedu** scheme, and run it. Xcode may ask you to trust the pinned MLX
-build-tool plugin; review the prompt and choose **Trust & Enable** to continue.
 
 ## Build a DMG release
 
