@@ -51,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         #endif
         let firstRun = !Onboarding.isCompleted
-        controller.start(requestPermissions: !firstRun)
+        controller.start(requestPermissions: !firstRun, downloadModels: !firstRun)
         updates.start()
         if firstRun { onboarding.show() }
     }

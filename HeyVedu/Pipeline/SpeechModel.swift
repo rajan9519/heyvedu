@@ -27,22 +27,41 @@ final class SpeechModel: Transcriber {
     @ObservationIgnored private var prepareTask: Task<Void, Never>?
     private let logger = Logger(subsystem: "com.heyvedu.app", category: "SpeechModel")
 
+    /// Approximate size of the first-launch download, shown before it starts.
+    static let downloadSize: Int64 = 600_000_000
+
+    /// FluidAudio reports the download as this share of the whole load; Core ML
+    /// compilation is the rest.
+    private nonisolated static let downloadShare = 0.5
+
     var isReady: Bool { state == .ready }
+
+    /// The model files are on disk, so `prepare()` loads them without downloading.
+    var isDownloaded: Bool { ParakeetEngine.modelsCached() }
 
     /// Downloads (if needed) and loads the model. Safe to call repeatedly; also used to retry.
     func prepare() {
         guard prepareTask == nil, state != .ready else { return }
+        if isDownloaded {
+            state = .loading
+            downloadProgress = nil
+        } else {
+            state = .downloading
+            downloadProgress = 0
+        }
         prepareTask = Task {
             defer { prepareTask = nil }
             let started = ContinuousClock.now
             do {
-                state = await engine.modelsCached() ? .loading : .downloading
                 try await engine.load { [weak self] progress in
                     // Download phases → "downloading"; Core ML compilation → "loading".
-                    let fraction = progress.fractionCompleted
+                    let fraction = min(1, progress.fractionCompleted / Self.downloadShare)
                     guard case .compiling = progress.phase else {
                         Task { @MainActor in
-                            if self?.state == .downloading { self?.downloadProgress = fraction }
+                            // Progress tasks can land out of order; never step back.
+                            guard let self, self.state == .downloading,
+                                  fraction > self.downloadProgress ?? 0 else { return }
+                            self.downloadProgress = fraction
                         }
                         return
                     }
@@ -79,7 +98,7 @@ private actor ParakeetEngine {
     private static let version: AsrModelVersion = .v3
     private var manager: AsrManager?
 
-    func modelsCached() -> Bool {
+    nonisolated static func modelsCached() -> Bool {
         AsrModels.modelsExist(at: AsrModels.defaultCacheDirectory(for: Self.version), version: Self.version)
     }
 

@@ -33,6 +33,14 @@ final class DictationModelBackend: CleanupBackend {
 
     var isNormalizer: Bool { true }
     var modelState: LocalModelState? { state }
+    var downloadSize: Int64? { Self.model.totalSize }
+
+    var isDownloaded: Bool {
+        #if DEBUG
+        if Self.developmentDirectory != nil { return true }
+        #endif
+        return Self.model.isDownloaded
+    }
 
     /// Called on every state change so the cleaner can refresh its availability.
     @ObservationIgnored var onStateChange: (() -> Void)?

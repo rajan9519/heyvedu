@@ -93,6 +93,12 @@ final class TextCleaner {
 
     var modelState: LocalModelState? { backend.modelState }
 
+    /// Bytes the selected engine downloads before it works; nil for engines without one.
+    var downloadSize: Int64? { backend.downloadSize }
+
+    /// The selected engine still has weights to download before it can clean.
+    var needsDownload: Bool { !backend.isDownloaded }
+
     @ObservationIgnored private let backends: [Engine: any CleanupBackend]
     private var backend: any CleanupBackend { backends[engine]! }
 

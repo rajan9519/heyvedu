@@ -47,12 +47,17 @@ nonisolated struct PinnedModel: Sendable {
     /// sizes instead of re-hashing the weights.
     private var verifiedMarker: URL { directory.appending(path: ".verified") }
 
+    /// Every file of this revision is on disk and passed its hash check.
+    var isDownloaded: Bool {
+        FileManager.default.fileExists(atPath: verifiedMarker.path)
+            && files.allSatisfy { Self.size(of: directory.appending(path: $0.name)) == $0.size }
+    }
+
     /// Downloads and verifies missing files, then returns the model directory.
     /// `progress` receives the completed fraction (0...1) while downloading.
     func ensureDownloaded(progress: @escaping @Sendable (Double) -> Void) async throws -> URL {
         let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: verifiedMarker.path),
-           files.allSatisfy({ Self.size(of: directory.appending(path: $0.name)) == $0.size }) {
+        if isDownloaded {
             removeOtherRevisions()
             return directory
         }

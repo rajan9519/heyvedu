@@ -96,7 +96,8 @@ final class DictationController {
             if !permissions.allGranted { return "Permissions needed" }
             if !hotkeyAvailable { return "Hotkey unavailable — re-grant Accessibility" }
             switch speechModel.state {
-            case .idle, .loading: return "Loading speech model…"
+            case .idle: return "Speech model not downloaded"
+            case .loading: return "Loading speech model…"
             case .downloading: return "Downloading speech model (~600 MB)…"
             case .failed: return "Speech model failed to load"
             case .ready: break
@@ -108,9 +109,12 @@ final class DictationController {
 
     // MARK: - Lifecycle
 
-    /// - Parameter requestPermissions: Prompt for missing grants right away. Off while the
-    ///   onboarding window is up, which asks for them with an explanation instead.
-    func start(requestPermissions: Bool = true) {
+    /// - Parameters:
+    ///   - requestPermissions: Prompt for missing grants right away. Off while the
+    ///     onboarding window is up, which asks for them with an explanation instead.
+    ///   - downloadModels: Start model downloads right away. Off on first run, where the
+    ///     onboarding window offers them; models already on disk load either way.
+    func start(requestPermissions: Bool = true, downloadModels: Bool = true) {
         devices.start()
 
         hotkeyMonitor.hotkey = hotkey
@@ -128,9 +132,9 @@ final class DictationController {
         }
 
         speechModel.onReady = { [weak self] in self?.showLaunchHintIfNeeded() }
-        speechModel.prepare()
+        if downloadModels || speechModel.isDownloaded { speechModel.prepare() }
         cleaner.onDownloadedModelReady = { [weak self] in self?.cleanupModelReady() }
-        cleaner.warmUp()
+        if downloadModels || !cleaner.needsDownload { cleaner.warmUp() }
 
         permissions.onChange = { [weak self] in self?.permissionsChanged() }
         permissions.startMonitoring()
@@ -140,6 +144,12 @@ final class DictationController {
             if !permissions.accessibilityGranted { permissions.requestAccessibility() }
         }
         permissionsChanged()
+    }
+
+    /// Starts any model download not started yet, e.g. the onboarding window closed first.
+    func downloadModels() {
+        speechModel.prepare()
+        cleaner.warmUp()
     }
 
     /// For the first few launches after onboarding, remind the user of the hotkey once
@@ -250,7 +260,10 @@ final class DictationController {
         case .failed:
             pressFailure = "Speech model unavailable"
             return
-        case .idle, .downloading, .loading:
+        case .idle:
+            pressFailure = "Speech model not downloaded"
+            return
+        case .downloading, .loading:
             pressFailure = "Speech model still loading…"
             return
         }

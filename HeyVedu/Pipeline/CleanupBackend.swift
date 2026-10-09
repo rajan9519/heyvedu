@@ -16,6 +16,12 @@ protocol CleanupBackend: AnyObject {
     /// the "model ready" notice. Nil for engines without a model lifecycle.
     var modelState: LocalModelState? { get }
 
+    /// Bytes to download before the engine works, for engines that download weights.
+    var downloadSize: Int64? { get }
+
+    /// The engine's weights are on disk (always true for engines without a download).
+    var isDownloaded: Bool { get }
+
     /// Set by `TextCleaner`; the backend calls it whenever its availability may have changed.
     var onStateChange: (() -> Void)? { get set }
 
@@ -43,6 +49,8 @@ protocol CleanupBackend: AnyObject {
 extension CleanupBackend {
     var isNormalizer: Bool { false }
     var modelState: LocalModelState? { nil }
+    var downloadSize: Int64? { nil }
+    var isDownloaded: Bool { true }
     func warmUp() {}
     func prepare(instructions: String) { warmUp() }
     func discardPrepared() {}

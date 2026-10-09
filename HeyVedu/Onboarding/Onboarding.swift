@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// First-run guide: what HeyVedu does, the two permissions, the model download, and a
+/// First-run guide: what HeyVedu does, the two permissions, the model downloads, and a
 /// practice dictation. Shown automatically once; reopened from the menu.
 enum Onboarding {
     private static let completedKey = "onboardingCompleted"
@@ -38,6 +38,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         // Closing early counts too: the menu keeps the Grant buttons and the guide.
         Onboarding.isCompleted = true
+        // Dictation needs the speech model, so whatever wasn't started here starts now.
+        controller.downloadModels()
         window = nil
     }
 
@@ -70,7 +72,7 @@ private struct OnboardingView: View {
                 switch step {
                 case .welcome: WelcomeStep(hotkey: controller.hotkey)
                 case .permissions: PermissionsStep(permissions: controller.permissions, hotkey: controller.hotkey)
-                case .model: ModelStep(model: controller.speechModel)
+                case .model: ModelStep(model: controller.speechModel, cleaner: controller.cleaner)
                 case .practice: PracticeStep(controller: controller)
                 }
             }
@@ -104,7 +106,8 @@ private struct OnboardingView: View {
 
     @ViewBuilder private var primaryButton: some View {
         switch step {
-        case .permissions where !controller.permissions.allGranted:
+        case .permissions where !controller.permissions.allGranted,
+             .model where controller.speechModel.state == .idle:
             Button("Skip for Now") { move(by: 1) }
         case .practice:
             Button("Done", action: finish)
@@ -216,48 +219,164 @@ private struct PermissionRow: View {
 
 private struct ModelStep: View {
     let model: SpeechModel
+    let cleaner: TextCleaner
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             StepHeader(
-                title: "Speech model",
-                subtitle: "HeyVedu transcribes with a speech model that runs on your Mac. It downloads once (about 600 MB) and works offline after that."
+                title: "Models",
+                subtitle: "HeyVedu runs these models on your Mac. Each downloads once and works offline after that."
             )
-            status
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
-            Text("You can continue while it downloads.")
+            ModelRow(
+                icon: "waveform",
+                title: "Speech model",
+                detail: "Turns your voice into text. Required for dictation.",
+                status: speechStatus,
+                download: model.prepare
+            )
+            ModelRow(
+                icon: "text.badge.checkmark",
+                title: "Cleanup model",
+                detail: "\(cleaner.engine.name) removes filler words, applies your corrections and fixes punctuation. Optional.",
+                status: cleanupStatus,
+                download: downloadCleanup
+            )
+            Text("You can continue while they download. Turn off Clean Up Transcripts in the menu to skip the cleanup model.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer()
         }
     }
 
-    @ViewBuilder private var status: some View {
+    private var speechStatus: ModelRow.Status {
         switch model.state {
+        case .idle: return .notDownloaded(size: SpeechModel.downloadSize)
+        case .downloading: return .downloading(model.downloadProgress ?? 0, size: SpeechModel.downloadSize)
+        case .loading: return .loading
+        case .ready: return .ready
+        case .failed(let reason): return .failed(reason)
+        }
+    }
+
+    private var cleanupStatus: ModelRow.Status {
+        guard cleaner.isEnabled else {
+            return cleaner.needsDownload ? .notDownloaded(size: cleaner.downloadSize) : .off
+        }
+        switch cleaner.modelState {
+        case nil: return .builtIn
+        case .idle: return .notDownloaded(size: cleaner.downloadSize)
+        case .downloading(let fraction): return .downloading(fraction, size: cleaner.downloadSize)
+        case .loading: return .loading
+        case .ready: return .ready
+        case .failed(let reason): return .failed(reason)
+        }
+    }
+
+    private func downloadCleanup() {
+        // Turning cleanup on starts its download; otherwise start (or retry) it directly.
+        if cleaner.isEnabled { cleaner.warmUp() } else { cleaner.isEnabled = true }
+    }
+}
+
+private struct ModelRow: View {
+    enum Status {
+        case notDownloaded(size: Int64?)
+        /// Downloaded but cleanup is turned off.
+        case off
+        /// The engine needs no download (Apple Intelligence).
+        case builtIn
+        case downloading(Double, size: Int64?)
+        case loading
+        case ready
+        case failed(String)
+    }
+
+    let icon: String
+    let title: String
+    let detail: String
+    let status: Status
+    let download: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.title2)
+                .frame(width: 32)
+                .foregroundStyle(Color.accentColor)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline)
+                Text(detail)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                progress
+            }
+            Spacer(minLength: 12)
+            trailing
+        }
+        .padding(14)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    @ViewBuilder private var progress: some View {
+        switch status {
+        case .downloading(let fraction, let size):
+            ProgressView(value: fraction)
+                .padding(.top, 6)
+            if let size {
+                Text("\(Self.format(Int64(Double(size) * fraction))) of \(Self.format(size))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        case .failed(let reason):
+            Label(reason, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        default:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder private var trailing: some View {
+        switch status {
+        case .notDownloaded(let size):
+            VStack(alignment: .trailing, spacing: 4) {
+                Button("Download", action: download)
+                if let size {
+                    Text(Self.format(size))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        case .off:
+            Button("Turn On", action: download)
+        case .builtIn:
+            Label("Built in", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        case .downloading(let fraction, _):
+            Text("\(Int(fraction * 100))%")
+                .font(.headline)
+                .monospacedDigit()
+        case .loading:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Setting up…")
+            }
+            .foregroundStyle(.secondary)
         case .ready:
             Label("Ready", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
-        case .downloading:
-            if let progress = model.downloadProgress {
-                ProgressView(value: progress) {
-                    Text("Downloading…")
-                } currentValueLabel: {
-                    Text("\(Int(progress * 100))%").monospacedDigit()
-                }
-            } else {
-                ProgressView { Text("Downloading…") }
-            }
-        case .idle, .loading:
-            ProgressView { Text("Preparing the model…") }
-        case .failed(let reason):
-            VStack(alignment: .leading, spacing: 8) {
-                Label("Download failed: \(reason)", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                Button("Try Again", action: model.prepare)
-            }
+        case .failed:
+            Button("Try Again", action: download)
         }
+    }
+
+    private static func format(_ bytes: Int64) -> String {
+        bytes.formatted(.byteCount(style: .file))
     }
 }
 
@@ -323,6 +442,8 @@ private struct PracticeStep: View {
             warning("Allow both permissions first")
         } else if !controller.hotkeyAvailable {
             warning("Hotkey unavailable — quit and reopen HeyVedu")
+        } else if controller.speechModel.state == .idle {
+            warning("Download the speech model first")
         } else if !controller.speechModel.isReady {
             Label("Speech model still loading…", systemImage: "arrow.down.circle")
                 .foregroundStyle(.secondary)
