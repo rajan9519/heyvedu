@@ -60,8 +60,9 @@ if ! $unsigned; then
   xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null
 fi
 
-mkdir -p build/release dist
-work="$(mktemp -d "$PWD/build/release/run.XXXXXX")"
+# .noindex keeps Spotlight from listing the staged app copies next to the installed one.
+mkdir -p build/release.noindex dist
+work="$(mktemp -d "$PWD/build/release.noindex/run.XXXXXX")"
 echo "Build logs and intermediate artifacts: $work"
 
 # Building, staging and mounting the DMG each register another copy of the app with Launch
