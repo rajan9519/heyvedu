@@ -30,7 +30,7 @@ const apps = {
           <div class="sec">${ic('chevron-down')}Channels</div>
           <div class="ch"><b>#</b>general</div><div class="ch on"><b>#</b>design-review</div><div class="ch"><b>#</b>launch</div><div class="ch"><b>#</b>random</div>
           <div class="sec">${ic('chevron-down')}Direct messages</div>
-          <div class="ch"><i class="mini" style="background:#e8912d">M</i>Maya Chen</div><div class="ch"><i class="mini" style="background:#2bac76">L</i>Leo Park</div></aside>
+          <div class="ch"><i class="dm" style="background:#e8912d">M</i>Maya Chen</div><div class="ch"><i class="dm" style="background:#2bac76">L</i>Leo Park</div></aside>
         <main><div class="hd"><b># design-review ${ic('chevron-down')}</b><span class="mem"><i style="background:#e8912d"></i><i style="background:#2bac76"></i><i style="background:#5267ff"></i>12</span><span class="hud-btn">${ic('headphones')}${ic('chevron-down')}</span></div>
           <div class="tabsr"><span class="on">${ic('message-circle')}Messages</span><span>${ic('plus')}</span></div>
           <div class="feed" id="feed">
@@ -66,35 +66,21 @@ const apps = {
       <div class="f"><label>To:</label><span class="chip">Priya Raman</span><span class="add">${ic('circle-plus')}</span></div>
       <div class="f"><label>Cc:</label></div>
       <div class="f"><label>Subject:</label>Q4 deck</div>
-      <div class="f"><label>From:</label>Rajan Singh – rajan@northwind.co ${ic('chevron-down')}</div>
+      <div class="f"><label>From:</label>Rajan Singh – rajan@heyvedu.com ${ic('chevron-down')}</div>
       <div class="body"><span class="ins"></span><span class="caret"></span></div>
     </div>`,
-  ide: () => `
-    <div class="app ide">
-      <div class="tb">${lights}<span class="nav">${ic('arrow-left')}${ic('arrow-right')}</span><div class="cmd">${ic('search')}northwind</div><span class="nav">${ic('layout-sidebar')}${ic('settings')}</span></div>
-      <div class="body">
-        <aside><div class="acts">${ic('files', 'on')}${ic('search')}${ic('git-branch')}${ic('player-play')}${ic('layout-grid-add')}</div>
-          <div class="ttl">NORTHWIND</div>
-          <div class="fi">${ic('chevron-down')}src</div><div class="fi in"><b class="ts">TS</b>auth.ts</div><div class="fi in on"><b class="ts">TS</b>session.ts</div><div class="fi in"><b class="ts">TS</b>api.ts</div>
-          <div class="fi">${ic('chevron-down', 'r')}tests</div><div class="fi"><b class="md">${ic('markdown')}</b>README.md</div></aside>
-        <div class="ed"><div class="etabs"><span class="on"><b class="ts">TS</b>session.ts${ic('x')}</span><span><b class="ts">TS</b>api.ts</span></div>
-          <div class="crumbs">src › session.ts › <span class="t">refresh</span></div>
-          <div class="code"><div class="gut">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9</div><div><span class="k">export async function</span> <span class="fn">refresh</span>(token) {
-  <span class="k">const</span> res = <span class="k">await</span> <span class="fn">fetch</span>(<span class="s">'/auth/refresh'</span>, {
-    method: <span class="s">'POST'</span>,
-    body: JSON.<span class="fn">stringify</span>({ token }),
-  })
-  <span class="k">if</span> (!res.ok) <span class="k">throw new</span> <span class="t">AuthError</span>()
-  <span class="k">return</span> res.<span class="fn">json</span>()
-}
-</div></div></div>
-        <div class="chat"><div class="h"><span class="on">New Chat</span><span class="sp"></span>${ic('plus')}${ic('history')}${ic('dots')}</div>
-          <div class="hist"></div>
-          <div class="in"><div class="ctx"><span>@</span><span><b class="ts">TS</b>session.ts</span></div>
-            <div class="txt"><span class="ins"></span><span class="caret"></span><span class="ph">Plan, search, build anything</span></div>
-            <div class="row"><span class="pill">${ic('infinity')}Agent${ic('chevron-down')}</span><span class="model">Auto${ic('chevron-down')}</span><span class="sp"></span>${ic('photo')}<span class="go">${ic('arrow-up')}</span></div></div></div>
-      </div>
-      <div class="status"><span>${ic('git-branch')}main</span><span class="sp"></span><span>Ln 2, Col 18</span><span>TypeScript</span><span>Cursor Tab</span></div>
+  claude: () => `
+    <div class="app claude">
+      <aside><div class="tb">${lights}<span class="sp"></span>${ic('layout-sidebar')}</div>
+        <div class="si new"><span>${ic('plus')}</span>New chat</div>
+        <div class="si">${ic('messages')}Chats</div><div class="si">${ic('folder')}Projects</div><div class="si">${ic('layout-grid')}Artifacts</div>
+        <div class="grp">Recents</div>
+        <div class="rc on">Session refresh retries</div><div class="rc">Q4 deck outline</div><div class="rc">Postgres index tuning</div>
+        <div class="me"><i>R</i><div><b>Rajan</b><span>Max plan</span></div></div></aside>
+      <main><div class="feed" id="feed"><h2><img src="assets/apps/claude-ai-icon.svg" alt="">Good morning, Rajan</h2></div>
+        <div class="composer" id="box"><div class="txt"><span class="ins"></span><span class="caret"></span><span class="ph">How can I help you today?</span></div>
+          <div class="row"><span class="cb">${ic('plus')}</span><span class="cb">${ic('adjustments-horizontal')}</span><span class="sp"></span><span class="model">Opus 5.5${ic('chevron-down')}</span><span class="go">${ic('arrow-up')}</span></div></div>
+        <div class="chips"><span>${ic('code')}Code</span><span>${ic('pencil')}Write</span><span>${ic('school')}Learn</span></div></main>
     </div>`,
   imsg: () => `
     <div class="app imsg">
@@ -120,7 +106,7 @@ const scenes = [
   { app: 'mail', name: 'Mail', sub: 'Formatting', logo: 'mail.png',
     said: [['hi priya',''],['new line','c'],['thanks for sending the deck over',''],['uh','f'],['i’ll review it by three PM tomorrow and send notes','']],
     out: 'Hi Priya,<br>Thanks for sending the deck over. I’ll review it by 3 PM tomorrow and send notes.' },
-  { app: 'ide', name: 'Cursor', sub: 'Your dictionary', logo: 'cursor_dark.svg', tile: '#14120b',
+  { app: 'claude', name: 'Claude', sub: 'Your dictionary', logo: 'claude.png', send: 'claude',
     said: [['make',''],['refresh','d'],['retry once on a',''],['four oh one',''],['and log it with',''],['sentry','d'],['then add a',''],['vitest','d'],['case','']],
     out: 'Make <code>refresh</code> retry once on a 401 and log it with <mark class="dict">Sentry</mark>, then add a <mark class="dict">Vitest</mark> case.' },
   { app: 'imsg', name: 'Messages', sub: 'Fillers & numbers', logo: 'messages.png', send: 'imsg',
@@ -184,6 +170,7 @@ async function play(i) {
     await sleep(400); if (!alive()) return;
     const feed = win.querySelector('#feed');
     if (s.send === 'slack') feed.insertAdjacentHTML('beforeend', `<div class="msg" style="animation:pop .35s"><div class="av" style="background:#5267ff">R</div><div><b>Rajan Singh</b><time>10:45 AM</time><p>${s.out}</p></div></div>`);
+    else if (s.send === 'claude') { win.querySelector('.app').classList.add('chat'); feed.innerHTML = `<div class="umsg">${s.out}</div><img class="spark" src="assets/apps/claude-ai-icon.svg" alt="">`; }
     else { feed.insertAdjacentHTML('beforeend', `<div class="bub me">${s.out}</div><div class="dlv">Delivered</div>`); }
     ins.innerHTML = '';
   }
