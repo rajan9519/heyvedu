@@ -133,6 +133,11 @@ final class TextCleaner {
         backend.warmUp()
     }
 
+    /// Starts (or retries) the selected engine's download, turning cleanup on if it's off.
+    func download() {
+        if isEnabled { warmUp() } else { isEnabled = true }
+    }
+
     /// Stops background work and frees every engine's memory. Called when the app quits.
     func shutdown() {
         backends.values.forEach { $0.shutdown() }

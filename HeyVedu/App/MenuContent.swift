@@ -3,9 +3,7 @@ import SwiftUI
 struct MenuContent: View {
     let controller: DictationController
     let updates: UpdateController
-    let showWelcomeGuide: () -> Void
-    let recordShortcut: () -> Void
-    let editDictionary: () -> Void
+    let openMainWindow: () -> Void
 
     var body: some View {
         Text(controller.statusText)
@@ -29,11 +27,6 @@ struct MenuContent: View {
 
         Toggle("Clean Up Transcripts", isOn: cleanupEnabled)
         if controller.cleaner.isEnabled {
-            Picker("Cleanup Engine", selection: cleanupEngine) {
-                ForEach(TextCleaner.Engine.allCases) { engine in
-                    Text(engine.title).tag(engine)
-                }
-            }
             if case .unavailable(let reason) = controller.cleaner.availability {
                 if let progress = controller.cleaner.downloadProgress {
                     Text(reason)
@@ -46,14 +39,6 @@ struct MenuContent: View {
             }
         }
 
-        Button(dictionaryTitle, action: editDictionary)
-
-        Divider()
-
-        Button("Dictation Shortcut: \(controller.hotkey.symbols)…", action: recordShortcut)
-        if controller.hotkey.modifiers == .function, Hotkey.systemUsesFunctionKey {
-            Button("Set “Press 🌐 key to” to Do Nothing…") { Hotkey.openKeyboardSettings() }
-        }
         Toggle("Double-Tap for Hands-Free", isOn: handsFreeEnabled)
 
         Divider()
@@ -67,6 +52,8 @@ struct MenuContent: View {
 
         Divider()
 
+        Button("Open HeyVedu…", action: openMainWindow)
+            .keyboardShortcut(",")
         if updates.isAvailable {
             switch updates.state {
             case .idle:
@@ -77,7 +64,6 @@ struct MenuContent: View {
                 Text(updates.menuTitle)
             }
         }
-        Button("Show Welcome Guide…", action: showWelcomeGuide)
         Button("Quit HeyVedu") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
@@ -86,13 +72,6 @@ struct MenuContent: View {
         Binding(
             get: { controller.cleaner.isEnabled },
             set: { controller.cleaner.isEnabled = $0 }
-        )
-    }
-
-    private var cleanupEngine: Binding<TextCleaner.Engine> {
-        Binding(
-            get: { controller.cleaner.engine },
-            set: { controller.cleaner.engine = $0 }
         )
     }
 
@@ -108,11 +87,6 @@ struct MenuContent: View {
             get: { controller.devices.selectedDeviceUID },
             set: { controller.devices.selectedDeviceUID = $0 }
         )
-    }
-
-    private var dictionaryTitle: String {
-        let count = controller.dictionary.entries.count
-        return count == 0 ? "Dictionary…" : "Dictionary (\(count) \(count == 1 ? "word" : "words"))…"
     }
 
     private var systemDefaultLabel: String {

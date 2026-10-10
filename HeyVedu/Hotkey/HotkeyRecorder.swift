@@ -1,46 +1,8 @@
-import AppKit
 import SwiftUI
 
-/// Small window for choosing a custom dictation hotkey by holding it down.
-final class HotkeyRecorderWindowController: NSObject, NSWindowDelegate {
-    private let controller: DictationController
-    private var window: NSWindow?
-
-    init(controller: DictationController) {
-        self.controller = controller
-    }
-
-    func show() {
-        let window = self.window ?? makeWindow()
-        self.window = window
-        // Pressing the current hotkey here must not start a dictation.
-        controller.hotkeySuspended = true
-        NSApp.activate()
-        window.makeKeyAndOrderFront(nil)
-        window.orderFrontRegardless()
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        controller.hotkeySuspended = false
-        window = nil
-    }
-
-    private func makeWindow() -> NSWindow {
-        let view = HotkeyRecorderView(current: controller.hotkey) { [weak self] hotkey in
-            if let hotkey { self?.controller.hotkey = hotkey }
-            self?.window?.close()
-        }
-        let window = NSWindow(contentViewController: NSHostingController(rootView: view))
-        window.title = "Dictation Shortcut"
-        window.styleMask = [.titled, .closable]
-        window.isReleasedWhenClosed = false
-        window.delegate = self
-        window.center()
-        return window
-    }
-}
-
-private struct HotkeyRecorderView: View {
+/// Records a new dictation hotkey: the user holds modifier keys and lets go. Shown in
+/// the main window's Shortcut section; the caller suspends the global hotkey meanwhile.
+struct HotkeyRecorderView: View {
     let current: Hotkey
     /// Called with the chosen hotkey, or nil when cancelled.
     let finish: (Hotkey?) -> Void
@@ -56,7 +18,7 @@ private struct HotkeyRecorderView: View {
     private var problem: String? { message ?? captured?.problem }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Hold the keys you want to use, then let go.")
                 .font(.headline)
             Text("Use modifier keys only: ⌃ ⌥ ⇧ ⌘ or fn. Currently \(current.symbols).")
@@ -97,8 +59,6 @@ private struct HotkeyRecorderView: View {
                     .disabled(captured == nil || problem != nil || heldFlags != 0)
             }
         }
-        .padding(24)
-        .frame(width: 440)
         .onAppear(perform: startMonitoring)
         .onDisappear(perform: stopMonitoring)
     }

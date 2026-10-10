@@ -114,9 +114,10 @@ signing, Apple ID setup, notarization, and installation verification steps.
 ## First launch
 
 HeyVedu opens a short welcome guide that walks through the steps below and
-a practice dictation. It runs from the menu bar (and shows in the Dock);
-click the Dock icon or choose **Show Welcome Guide…** from the menu to see
-the guide again.
+a practice dictation. Once you finish it, the HeyVedu window opens, and it
+opens again each time you launch the app or click its Dock icon. Closing the
+window leaves HeyVedu running in the menu bar. Click **Show Welcome Guide…** on
+the window's Home page to see the guide again.
 
 1. Grant **Microphone** access so the app can record while the hotkey is held.
 2. Grant **Accessibility** access so it can observe the push-to-talk hotkey and
@@ -159,16 +160,21 @@ For longer dictation, double-tap the shortcut instead of holding it. The
 floating indicator shows a lock while HeyVedu keeps listening. Press the
 shortcut once more to finish, or press **Escape** to cancel. You can type while
 it listens; only Escape cancels. A hands-free recording stops by itself after
-10 minutes. Turn off **Double-Tap for Hands-Free** in the menu to disable it.
+10 minutes. Turn off **Double-Tap for Hands-Free** in the menu, or in the
+window's Shortcut section, to disable it.
 
 ## Settings
 
-Click the menu-bar icon to configure the app.
+Settings live in the HeyVedu window. Click the Dock icon, or choose **Open
+HeyVedu…** from the menu-bar icon. Its sidebar has **Home** (status,
+permissions and the welcome guide), **General**, **Shortcut**, **Dictionary**
+and **Models**. The menu-bar icon keeps quick toggles for cleanup, hands-free
+mode and the microphone.
 
 ### Dictation shortcut
 
-The default is **⌃⌥**. To change it, choose **Dictation Shortcut…** in the
-menu, hold the modifier keys you want, and let go. Shortcuts use modifier keys
+The default is **⌃⌥**. To change it, open the **Shortcut** section of the window,
+click **Change…**, hold the modifier keys you want, and let go. Shortcuts use modifier keys
 only. A single key must be fn or a right-hand ⌘, ⌥ or ⌃, because the left-hand
 keys start too many other shortcuts.
 
@@ -177,7 +183,8 @@ held. For example, **Right ⌥⌘** ignores the left ⌥ and ⌘ keys. A shortcu
 recorded with left-hand keys only works with either side's keys.
 
 macOS acts on the fn (🌐) key itself. If you choose fn, set **System Settings
-→ Keyboard → Press 🌐 key to** to **Do Nothing**. The menu links there until you do.
+→ Keyboard → Press 🌐 key to** to **Do Nothing**. The Home and Shortcut
+sections link there until you do.
 
 ### Cleanup engines
 
@@ -186,13 +193,15 @@ macOS acts on the fn (🌐) key itself. If you choose fn, set **System Settings
 | **Vedu Scribe** | On your Mac | Default. HeyVedu's own cleanup model, a Qwen3.5-0.8B fine-tune ([model card](https://huggingface.co/heyvedu/vedu-scribe-0.8b)). English-only; downloads about 560 MB on first use. |
 | **Apple Intelligence** | On your Mac | Uses Apple's on-device Foundation Model. Falls back to the raw transcript if the model is unavailable. |
 
-Turn off **Clean Up Transcripts** to paste the raw, locally generated transcript.
+Choose the engine in the window's **General** section. The **Models** section shows
+each model's download and lets you start or retry it. Turn off **Clean Up
+Transcripts** to paste the raw, locally generated transcript.
 If a cleanup engine fails or rejects a result, HeyVedu pastes the raw
 transcript instead and tells you why.
 
 ### Dictionary
 
-Open **Dictionary…** from the menu to list words HeyVedu should always write
+Open the window's **Dictionary** section to list words HeyVedu should always write
 your way: names, product terms and jargon. For each word you can add other ways
 the transcript writes it under **Also heard as**, one at a time (press Return
 after each), such as “hey vedu” or “Hey, we do” for HeyVedu, or “teh” for the.
@@ -210,7 +219,7 @@ and only holds what you type into it.
 ### Microphone
 
 Choose **System Default** or a specific input device from the **Microphone**
-menu. If a selected device is missing, HeyVedu falls back to the system
+menu, or in the window's General section. If a selected device is missing, HeyVedu falls back to the system
 default and shows a notice. If a device disappears while recording, it
 processes the audio captured so far.
 

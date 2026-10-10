@@ -1,40 +1,7 @@
-import AppKit
 import SwiftUI
 
-/// Window for editing the personal dictionary. Moves into the Settings window's
-/// Dictionary tab when that exists (roadmap 1.7).
-final class DictionaryWindowController: NSObject, NSWindowDelegate {
-    private let dictionary: PersonalDictionary
-    private var window: NSWindow?
-
-    init(dictionary: PersonalDictionary) {
-        self.dictionary = dictionary
-    }
-
-    func show() {
-        let window = self.window ?? makeWindow()
-        self.window = window
-        NSApp.activate()
-        window.makeKeyAndOrderFront(nil)
-        window.orderFrontRegardless()
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        window = nil
-    }
-
-    private func makeWindow() -> NSWindow {
-        let window = NSWindow(contentViewController: NSHostingController(rootView: DictionaryView(dictionary: dictionary)))
-        window.title = "Dictionary"
-        window.styleMask = [.titled, .closable, .resizable]
-        window.isReleasedWhenClosed = false
-        window.delegate = self
-        window.center()
-        return window
-    }
-}
-
-private struct DictionaryView: View {
+/// Editor for the personal dictionary: the main window's Dictionary section.
+struct DictionaryView: View {
     @Bindable var dictionary: PersonalDictionary
 
     @State private var term = ""
@@ -80,7 +47,7 @@ private struct DictionaryView: View {
             }
         }
         .padding(24)
-        .frame(minWidth: 480, idealWidth: 500, minHeight: 600, idealHeight: 660)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear { focus = .term }
     }
 

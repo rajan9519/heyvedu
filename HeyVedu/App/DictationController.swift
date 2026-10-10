@@ -89,6 +89,11 @@ final class DictationController {
         }
     }
 
+    /// Everything dictation needs is in place.
+    var canDictate: Bool {
+        permissions.allGranted && hotkeyAvailable && speechModel.isReady && !devices.inputDevices.isEmpty
+    }
+
     var statusText: String {
         switch status {
         case .recording: return "Recording…"

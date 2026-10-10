@@ -9,9 +9,7 @@ struct HeyVeduApp: App {
             MenuContent(
                 controller: appDelegate.controller,
                 updates: appDelegate.updates,
-                showWelcomeGuide: { appDelegate.onboarding.show() },
-                recordShortcut: { appDelegate.hotkeyRecorder.show() },
-                editDictionary: { appDelegate.dictionaryWindow.show() }
+                openMainWindow: { appDelegate.mainWindow.show() }
             )
         } label: {
             if appDelegate.controller.menuBarSymbol == "mic" {
@@ -38,9 +36,14 @@ struct HeyVeduApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let controller = DictationController()
     let updates = UpdateController()
-    lazy var onboarding = OnboardingWindowController(controller: controller)
-    lazy var hotkeyRecorder = HotkeyRecorderWindowController(controller: controller)
-    lazy var dictionaryWindow = DictionaryWindowController(dictionary: controller.dictionary)
+    lazy var onboarding: OnboardingWindowController = {
+        let onboarding = OnboardingWindowController(controller: controller)
+        onboarding.onClose = { [unowned self] in mainWindow.show() }
+        return onboarding
+    }()
+    lazy var mainWindow = MainWindowController(controller: controller) { [unowned self] in
+        onboarding.show()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         #if DEBUG
@@ -55,12 +58,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let firstRun = !Onboarding.isCompleted
         controller.start(requestPermissions: !firstRun, downloadModels: !firstRun)
         updates.start()
-        if firstRun { onboarding.show() }
+        // First run shows only the welcome guide; the main window follows when it closes.
+        if firstRun { onboarding.show() } else { mainWindow.show() }
     }
 
-    /// Clicking the Dock icon with no window open brings up the welcome guide.
+    /// Clicking the Dock icon with no window open brings up the main window (or the
+    /// welcome guide until it has been completed).
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        if !hasVisibleWindows { onboarding.show() }
+        if !hasVisibleWindows {
+            if Onboarding.isCompleted { mainWindow.show() } else { onboarding.show() }
+        }
         return true
     }
 

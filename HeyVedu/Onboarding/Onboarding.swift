@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// First-run guide: what HeyVedu does, the two permissions, the model downloads, and a
-/// practice dictation. Shown automatically once; reopened from the menu.
+/// practice dictation. Shown automatically once; reopened from the main window's Home page.
 enum Onboarding {
     private static let completedKey = "onboardingCompleted"
 
@@ -15,6 +15,9 @@ enum Onboarding {
 final class OnboardingWindowController: NSObject, NSWindowDelegate {
     private let controller: DictationController
     private var window: NSWindow?
+
+    /// Called after the guide closes and onboarding is marked complete.
+    var onClose: (() -> Void)?
 
     init(controller: DictationController) {
         self.controller = controller
@@ -36,11 +39,13 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
-        // Closing early counts too: the menu keeps the Grant buttons and the guide.
+        // Closing early counts too: the main window's Home page keeps the Allow
+        // buttons and the guide.
         Onboarding.isCompleted = true
         // Dictation needs the speech model, so whatever wasn't started here starts now.
         controller.downloadModels()
         window = nil
+        onClose?()
     }
 
     private func makeWindow() -> NSWindow {
@@ -147,7 +152,7 @@ private struct WelcomeStep: View {
             .font(.title3)
             .padding(.top, 8)
 
-            Label("HeyVedu runs from the menu bar, at the top right of your screen.", systemImage: "menubar.arrow.up.rectangle")
+            Label("HeyVedu also runs from the menu bar, at the top right of your screen.", systemImage: "menubar.arrow.up.rectangle")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .padding(.top, 8)
@@ -184,7 +189,8 @@ private struct PermissionsStep: View {
     }
 }
 
-private struct PermissionRow: View {
+/// A permission with an Allow… button. Used by onboarding and the main window's Home page.
+struct PermissionRow: View {
     let icon: String
     let title: String
     let detail: String
@@ -249,37 +255,16 @@ private struct ModelStep: View {
         }
     }
 
-    private var speechStatus: ModelRow.Status {
-        switch model.state {
-        case .idle: return .notDownloaded(size: SpeechModel.downloadSize)
-        case .downloading: return .downloading(model.downloadProgress ?? 0, size: SpeechModel.downloadSize)
-        case .loading: return .loading
-        case .ready: return .ready
-        case .failed(let reason): return .failed(reason)
-        }
-    }
+    private var speechStatus: ModelRow.Status { .speech(model) }
 
-    private var cleanupStatus: ModelRow.Status {
-        guard cleaner.isEnabled else {
-            return cleaner.needsDownload ? .notDownloaded(size: cleaner.downloadSize) : .off
-        }
-        switch cleaner.modelState {
-        case nil: return .builtIn
-        case .idle: return .notDownloaded(size: cleaner.downloadSize)
-        case .downloading(let fraction): return .downloading(fraction, size: cleaner.downloadSize)
-        case .loading: return .loading
-        case .ready: return .ready
-        case .failed(let reason): return .failed(reason)
-        }
-    }
+    private var cleanupStatus: ModelRow.Status { .cleanup(cleaner) }
 
-    private func downloadCleanup() {
-        // Turning cleanup on starts its download; otherwise start (or retry) it directly.
-        if cleaner.isEnabled { cleaner.warmUp() } else { cleaner.isEnabled = true }
-    }
+    private func downloadCleanup() { cleaner.download() }
 }
 
-private struct ModelRow: View {
+/// A model's download state with a Download / Try Again button. Used by onboarding and
+/// the main window's Models section.
+struct ModelRow: View {
     enum Status {
         case notDownloaded(size: Int64?)
         /// Downloaded but cleanup is turned off.
@@ -290,6 +275,30 @@ private struct ModelRow: View {
         case loading
         case ready
         case failed(String)
+
+        static func speech(_ model: SpeechModel) -> Status {
+            switch model.state {
+            case .idle: return .notDownloaded(size: SpeechModel.downloadSize)
+            case .downloading: return .downloading(model.downloadProgress ?? 0, size: SpeechModel.downloadSize)
+            case .loading: return .loading
+            case .ready: return .ready
+            case .failed(let reason): return .failed(reason)
+            }
+        }
+
+        static func cleanup(_ cleaner: TextCleaner) -> Status {
+            guard cleaner.isEnabled else {
+                return cleaner.needsDownload ? .notDownloaded(size: cleaner.downloadSize) : .off
+            }
+            switch cleaner.modelState {
+            case nil: return .builtIn
+            case .idle: return .notDownloaded(size: cleaner.downloadSize)
+            case .downloading(let fraction): return .downloading(fraction, size: cleaner.downloadSize)
+            case .loading: return .loading
+            case .ready: return .ready
+            case .failed(let reason): return .failed(reason)
+            }
+        }
     }
 
     let icon: String
