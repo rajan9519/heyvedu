@@ -200,8 +200,9 @@ final class TextCleaner {
         backend.discardPrepared()
     }
 
-    /// `dictionary` terms in a chunk must survive cleanup; a chunk that loses one is pasted raw.
-    func clean(_ transcript: String, dictionary: DictionaryMatcher = .empty) async -> Result {
+    /// Phrases `protected` matches in a chunk (dictionary terms, snippet triggers) must
+    /// survive cleanup; a chunk that loses one is pasted raw.
+    func clean(_ transcript: String, protected: [DictionaryMatcher] = []) async -> Result {
         defer { discardPrepared() }
         guard isEnabled else { return Result(text: transcript, fallbackReason: "cleanup disabled") }
         refreshAvailability()
@@ -218,10 +219,10 @@ final class TextCleaner {
         for chunk in chunks {
             do {
                 let cleaned = try await backend.clean(chunk, instructions: instructions)
-                if dictionary.missingTerm(from: chunk, in: cleaned) != nil {
+                if protected.contains(where: { $0.missingTerm(from: chunk, in: cleaned) != nil }) {
                     // The reason is logged, so it doesn't name the word.
                     outputs.append(backend.isNormalizer ? TextPolish.finalize(chunk) : chunk)
-                    fallbackReason = "cleanup changed a dictionary word"
+                    fallbackReason = "cleanup changed a dictionary word or snippet"
                 } else if backend.isNormalizer {
                     // Trained to drop retracted text, apply spoken commands ("new line",
                     // "bullet point") and return nothing for filler-only speech, which the

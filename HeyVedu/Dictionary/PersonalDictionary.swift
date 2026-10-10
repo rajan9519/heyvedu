@@ -64,37 +64,55 @@ final class PersonalDictionary {
     }
 }
 
-/// Immutable, precompiled matcher for a set of dictionary entries.
+/// Immutable, precompiled matcher that rewrites spoken phrases. Built from dictionary
+/// entries, and from snippets (`SnippetExpander`).
 nonisolated struct DictionaryMatcher: Sendable {
+    /// Phrases that are all rewritten to `replacement`.
+    struct Rule: Sendable {
+        var replacement: String
+        var phrases: [String]
+        /// A lowercase-only replacement takes the matched text's leading capital.
+        var adaptsCapital = true
+    }
+
     private struct Pattern: Sendable {
         let entryIndex: Int
         let source: String
     }
 
     private let terms: [String]
+    private let adaptsCapital: [Bool]
     private let patterns: [Pattern]
     /// One alternation of every pattern, longest first, each in its own capture group.
     private let regex: NSRegularExpression?
 
-    static let empty = DictionaryMatcher(entries: [])
+    static let empty = DictionaryMatcher(rules: [])
 
     var isEmpty: Bool { regex == nil }
 
     init(entries: [PersonalDictionary.Entry]) {
+        self.init(rules: entries.map { entry in
+            let term = entry.term.trimmingCharacters(in: .whitespacesAndNewlines)
+            // The term itself is matched too, so "heyvedu" is fixed to "HeyVedu".
+            return Rule(replacement: term, phrases: [term] + entry.alternatives)
+        })
+    }
+
+    init(rules: [Rule]) {
         var terms: [String] = []
+        var adaptsCapital: [Bool] = []
         var patterns: [Pattern] = []
         var seen = Set<String>()
-        for entry in entries {
-            let term = entry.term.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !term.isEmpty else { continue }
+        for rule in rules {
+            guard !rule.replacement.isEmpty else { continue }
             let index = terms.count
-            terms.append(term)
-            // The term itself is matched too, so "heyvedu" is fixed to "HeyVedu".
-            for phrase in [term] + entry.alternatives {
+            terms.append(rule.replacement)
+            adaptsCapital.append(rule.adaptsCapital)
+            for phrase in rule.phrases {
                 let words = Self.words(of: phrase)
                 guard !words.isEmpty else { continue }
                 // The first entry claiming a phrase wins.
-                guard seen.insert(words.joined(separator: " ").lowercased()).inserted else { continue }
+                guard seen.insert(Self.normalized(phrase)).inserted else { continue }
                 let body = words.map(NSRegularExpression.escapedPattern(for:)).joined(separator: Self.separator)
                 patterns.append(Pattern(entryIndex: index, source: body))
             }
@@ -102,6 +120,7 @@ nonisolated struct DictionaryMatcher: Sendable {
         // Longest first so "hey vedu pro" wins over "hey vedu" at the same position.
         patterns.sort { $0.source.count > $1.source.count }
         self.terms = terms
+        self.adaptsCapital = adaptsCapital
         self.patterns = patterns
         if patterns.isEmpty {
             regex = nil
@@ -126,7 +145,7 @@ nonisolated struct DictionaryMatcher: Sendable {
             result.append(source.substring(with: NSRange(location: cursor, length: match.range.location - cursor)))
             let matched = source.substring(with: match.range)
             var term = terms[index]
-            if term == term.lowercased(), matched.first?.isUppercase == true, let first = term.first {
+            if adaptsCapital[index], term == term.lowercased(), matched.first?.isUppercase == true, let first = term.first {
                 term = first.uppercased() + term.dropFirst()
             }
             result.append(term)
@@ -161,6 +180,12 @@ nonisolated struct DictionaryMatcher: Sendable {
     /// Between a phrase's words: whitespace and the punctuation that speech recognition and
     /// cleanup add or drop freely, so "hey we do" also matches "Hey, we do." and "Hey. We do".
     private static let separator = #"[\s,.;:!?\-–—]+"#
+
+    /// How two phrases compare for matching: same words, ignoring case and punctuation
+    /// around them. Equal results mean the phrases match the same speech.
+    static func normalized(_ phrase: String) -> String {
+        words(of: phrase).joined(separator: " ").lowercased()
+    }
 
     /// Whitespace-separated words of a phrase, without surrounding punctuation
     /// ("Hey," → "Hey"). Inner punctuation stays ("C++", "Node.js", "e-mail").

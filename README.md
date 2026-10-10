@@ -23,7 +23,7 @@ connection only for the initial build and model downloads.
 - Offers local cleanup with Vedu Scribe, HeyVedu's own model (the default), or
   Apple Intelligence.
 - Writes names and terms from your personal dictionary exactly as you spell
-  them.
+  them, and expands spoken snippets into saved text.
 - Lets you select any connected microphone and follows device changes.
 - Keeps no dictation history and never writes recorded audio to disk. Only the
   last result stays in memory, for five minutes, so you can paste it again.
@@ -238,6 +238,20 @@ The **Try it** field shows the result on a sample sentence.
 The dictionary is saved in `~/Library/Application Support/HeyVedu/Dictionary.json`
 and only holds what you type into it.
 
+### Snippets
+
+Open the window's **Snippets** section to save text you insert often, such as
+a scheduling link, an address, or an email signature. Under **When I say**,
+type a trigger phrase; under **Insert**, the text (press **Option + Return** for
+a line break). Say the trigger anywhere in a dictation (“here's my calendly
+link”) and HeyVedu inserts the text exactly as you typed it, line breaks
+included. A dictation that is only the trigger becomes only the text. Matching
+works like the dictionary: any capitalization, whole words, punctuation between
+words ignored. Pick phrases you wouldn't say otherwise.
+
+Snippets are saved in `~/Library/Application Support/HeyVedu/Snippets.json` and
+only hold what you type into them.
+
 ### Microphone
 
 Choose **System Default** or a specific input device from the **Microphone**
@@ -271,7 +285,7 @@ Microphone → in-memory audio → on-device Parakeet → on-device Vedu Scribe 
 | Speech recognition | On-device | On-device |
 | Transcript cleanup | On-device | On-device |
 | Dictation history | Not stored; the last result stays in memory for 5 minutes | Not stored; the last result stays in memory for 5 minutes |
-| Personal dictionary | Your words only, on disk | Your words only, on disk |
+| Personal dictionary and snippets | What you type only, on disk | What you type only, on disk |
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
 **Command + V**, and restoring the previous clipboard contents after roughly

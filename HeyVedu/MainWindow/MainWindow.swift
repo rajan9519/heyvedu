@@ -47,7 +47,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 }
 
 private enum SidebarItem: String, CaseIterable, Identifiable {
-    case home, general, shortcut, dictionary, models
+    case home, general, shortcut, dictionary, snippets, models
 
     var id: Self { self }
 
@@ -57,6 +57,7 @@ private enum SidebarItem: String, CaseIterable, Identifiable {
         case .general: return "General"
         case .shortcut: return "Shortcut"
         case .dictionary: return "Dictionary"
+        case .snippets: return "Snippets"
         case .models: return "Models"
         }
     }
@@ -67,6 +68,7 @@ private enum SidebarItem: String, CaseIterable, Identifiable {
         case .general: return "gearshape"
         case .shortcut: return "keyboard"
         case .dictionary: return "character.book.closed"
+        case .snippets: return "text.bubble"
         case .models: return "cpu"
         }
     }
@@ -100,6 +102,8 @@ private struct MainView: View {
             ShortcutSettings(controller: controller)
         case .dictionary:
             DictionaryView(dictionary: controller.dictionary)
+        case .snippets:
+            SnippetsView(library: controller.snippets, dictionary: controller.dictionary.matcher)
         case .models:
             ModelSettings(speechModel: controller.speechModel, cleaner: controller.cleaner)
         }
