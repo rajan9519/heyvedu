@@ -7,3 +7,4 @@ dist/
 Config/release.env
 Config/*.local.xcconfig
 .claude/
+docs/FEATURE-PLAN.md

@@ -179,7 +179,8 @@ final class TextCleaner {
         backend.discardPrepared()
     }
 
-    func clean(_ transcript: String) async -> Result {
+    /// `dictionary` terms in a chunk must survive cleanup; a chunk that loses one is pasted raw.
+    func clean(_ transcript: String, dictionary: DictionaryMatcher = .empty) async -> Result {
         defer { discardPrepared() }
         guard isEnabled else { return Result(text: transcript, fallbackReason: "cleanup disabled") }
         refreshAvailability()
@@ -196,7 +197,11 @@ final class TextCleaner {
         for chunk in chunks {
             do {
                 let cleaned = try await backend.clean(chunk, instructions: instructions)
-                if backend.isNormalizer {
+                if dictionary.missingTerm(from: chunk, in: cleaned) != nil {
+                    // The reason is logged, so it doesn't name the word.
+                    outputs.append(backend.isNormalizer ? TextPolish.finalize(chunk) : chunk)
+                    fallbackReason = "cleanup changed a dictionary word"
+                } else if backend.isNormalizer {
                     // Trained to drop retracted text, apply spoken commands ("new line",
                     // "bullet point") and return nothing for filler-only speech, which the
                     // chat-model overlap heuristics would reject.

@@ -22,6 +22,8 @@ connection only for the initial build and model downloads.
   punctuation and capitalization.
 - Offers local cleanup with Vedu Scribe, HeyVedu's own model (the default), or
   Apple Intelligence.
+- Writes names and terms from your personal dictionary exactly as you spell
+  them.
 - Lets you select any connected microphone and follows device changes.
 - Keeps no dictation history and never writes recorded audio to disk.
 
@@ -188,6 +190,23 @@ Turn off **Clean Up Transcripts** to paste the raw, locally generated transcript
 If a cleanup engine fails or rejects a result, HeyVedu pastes the raw
 transcript instead and tells you why.
 
+### Dictionary
+
+Open **Dictionary…** from the menu to list words HeyVedu should always write
+your way: names, product terms and jargon. For each word you can add other ways
+the transcript writes it under **Also heard as**, one at a time (press Return
+after each), such as “hey vedu” or “Hey, we do” for HeyVedu, or “teh” for the.
+Because each one is entered separately, an alternative can contain a comma.
+Punctuation between words doesn't matter when matching, so “hey we do” also
+catches “Hey, we do.”
+
+After cleanup, every match is replaced with your spelling. If a cleanup engine
+changes a listed word, HeyVedu pastes the raw transcript for that part instead.
+The **Try it** field shows the result on a sample sentence.
+
+The dictionary is saved in `~/Library/Application Support/HeyVedu/Dictionary.json`
+and only holds what you type into it.
+
 ### Microphone
 
 Choose **System Default** or a specific input device from the **Microphone**
@@ -209,6 +228,7 @@ Microphone → in-memory audio → on-device Parakeet → on-device Vedu Scribe 
 | Speech recognition | On-device | On-device |
 | Transcript cleanup | On-device | On-device |
 | Dictation history | Not stored | Not stored |
+| Personal dictionary | Your words only, on disk | Your words only, on disk |
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
 **Command + V**, and restoring the previous clipboard contents after roughly
@@ -264,8 +284,9 @@ This gives the device time to switch into its microphone profile.
 
 HeyVedu records 16 kHz mono audio in memory with AVAudioEngine. FluidAudio
 runs Parakeet through Core ML for speech recognition. The selected cleanup
-engine normalizes the transcript, then the app temporarily uses the clipboard
-to paste the result into the frontmost application.
+engine normalizes the transcript, personal dictionary replacements are applied,
+then the app temporarily uses the clipboard to paste the result into the
+frontmost application.
 
 Dependencies and model revisions are pinned in the project. Vedu Scribe files
 are also checked against pinned SHA-256 hashes before loading.
