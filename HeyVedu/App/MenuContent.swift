@@ -25,6 +25,13 @@ struct MenuContent: View {
 
         Divider()
 
+        Button("Paste Last Dictation") { controller.pasteLastResult() }
+            .disabled(controller.lastResult == nil || controller.status != .idle)
+        Button("Copy Last Dictation") { controller.copyLastResult() }
+            .disabled(controller.lastResult == nil)
+
+        Divider()
+
         Toggle("Clean Up Transcripts", isOn: cleanupEnabled)
         if controller.cleaner.isEnabled {
             if case .unavailable(let reason) = controller.cleaner.availability {

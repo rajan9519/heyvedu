@@ -45,6 +45,9 @@ final class DictationController {
     }
     /// Dictations pasted this session; the onboarding practice step watches it.
     private(set) var completedDictations = 0
+    /// The most recent dictation's text, kept in memory only so it can be pasted again.
+    /// Cleared `lastResultLifetime` after it was dictated.
+    private(set) var lastResult: String?
 
     @ObservationIgnored private let hotkeyMonitor = HotkeyMonitor()
     @ObservationIgnored private let recorder = AudioRecorder()
@@ -65,10 +68,15 @@ final class DictationController {
     @ObservationIgnored private var cleanupReadyNoticePending = false
     /// Ends a hands-free recording that runs past `handsFreeLimit`.
     @ObservationIgnored private var handsFreeLimitTask: Task<Void, Never>?
+    /// Forgets `lastResult` once it expires.
+    @ObservationIgnored private var lastResultExpiryTask: Task<Void, Never>?
 
     private static let minimumDuration: TimeInterval = 0.2
     private static let handsFreeLimit: Duration = .seconds(10 * 60)
     private static let handsFreeKey = "handsFreeEnabled"
+    private static let lastResultLifetime: Duration = .seconds(5 * 60)
+    /// Lets the menu close and focus return to the previous app before ⌘V is sent.
+    private static let menuDismissDelay: Duration = .milliseconds(250)
     private let logger = Logger(subsystem: "com.heyvedu.app", category: "Dictation")
 
     // MARK: - Menu bar presentation
@@ -324,6 +332,7 @@ final class DictationController {
         guard status == .recording else { return }
         endHandsFree()
         status = .processing
+        let target = PasteTarget.current()
         hud.showProcessing("Transcribing…")
 
         Task {
@@ -374,9 +383,13 @@ final class DictationController {
                     hud.flash("Nothing to paste")
                     return
                 }
-                inserter.insert(output)
+                remember(output)
+                let outcome = await inserter.insert(output, into: target)
                 completedDictations += 1
-                if awaitingDownload {
+                if let message = Self.copiedMessage(for: outcome) {
+                    // Ahead of the cleanup notices: the user has to act to get their text.
+                    hud.flashInfo(message, for: .seconds(4))
+                } else if awaitingDownload {
                     // Once per download; the menu shows its progress.
                     if !downloadNoticeShown {
                         downloadNoticeShown = true
@@ -394,5 +407,49 @@ final class DictationController {
                 hud.flash("Transcription failed")
             }
         }
+    }
+
+    // MARK: - Last result
+
+    private static func copiedMessage(for outcome: TextInserter.Outcome) -> String? {
+        switch outcome {
+        case .pasted:
+            return nil
+        case .noTextField:
+            return "No text field — copied, press ⌘V to paste"
+        case .targetUnavailable(let appName):
+            return "Couldn't return to \(appName ?? "the app") — copied, press ⌘V to paste"
+        }
+    }
+
+    private func remember(_ text: String) {
+        lastResult = text
+        lastResultExpiryTask?.cancel()
+        lastResultExpiryTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.lastResultLifetime)
+            guard !Task.isCancelled else { return }
+            self?.lastResult = nil
+        }
+    }
+
+    /// Pastes the last dictation into whatever has focus, e.g. after a paste went missing.
+    /// Called from the menu, so it waits for the menu to close first.
+    func pasteLastResult() {
+        guard status == .idle, lastResult != nil else { return }
+        // The menu doesn't take focus, so this is the app the user was just in.
+        let target = PasteTarget.current()
+        Task {
+            try? await Task.sleep(for: Self.menuDismissDelay)
+            // It may have expired, or a dictation started, while the menu closed.
+            guard status == .idle, let text = lastResult else { return }
+            if let message = Self.copiedMessage(for: await inserter.insert(text, into: target)) {
+                hud.flashInfo(message, for: .seconds(4))
+            }
+        }
+    }
+
+    func copyLastResult() {
+        guard let lastResult else { return }
+        inserter.copy(lastResult)
     }
 }

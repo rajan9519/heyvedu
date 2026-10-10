@@ -9,6 +9,8 @@ final class HUDModel {
         case listening
         case processing(String)
         case message(String)
+        /// Not a problem, just something the user should know (e.g. text was copied).
+        case info(String)
     }
 
     static let barCount = 24
@@ -62,9 +64,17 @@ final class RecordingHUD {
     }
 
     func flash(_ message: String, for duration: Duration = .seconds(1.5)) {
+        show(.message(message), for: duration)
+    }
+
+    func flashInfo(_ message: String, for duration: Duration = .seconds(1.5)) {
+        show(.info(message), for: duration)
+    }
+
+    private func show(_ phase: HUDModel.Phase, for duration: Duration) {
         model.notice = nil
         model.handsFree = false
-        model.phase = .message(message)
+        model.phase = phase
         present()
         hideTask = Task { [weak self] in
             try? await Task.sleep(for: duration)
@@ -158,6 +168,8 @@ private struct HUDView: View {
             ProgressView().controlSize(.small)
         case .message:
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+        case .info:
+            Image(systemName: "doc.on.clipboard").foregroundStyle(.secondary)
         }
     }
 
@@ -165,7 +177,7 @@ private struct HUDView: View {
         switch model.phase {
         case .waitingForAudio, .listening:
             Waveform(levels: model.levels, active: model.phase == .listening)
-        case .processing(let text), .message(let text):
+        case .processing(let text), .message(let text), .info(let text):
             Text(text).font(.callout).lineLimit(1)
         }
     }

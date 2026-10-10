@@ -25,7 +25,8 @@ connection only for the initial build and model downloads.
 - Writes names and terms from your personal dictionary exactly as you spell
   them.
 - Lets you select any connected microphone and follows device changes.
-- Keeps no dictation history and never writes recorded audio to disk.
+- Keeps no dictation history and never writes recorded audio to disk. Only the
+  last result stays in memory, for five minutes, so you can paste it again.
 
 For example:
 
@@ -163,6 +164,21 @@ it listens; only Escape cancels. A hands-free recording stops by itself after
 10 minutes. Turn off **Double-Tap for Hands-Free** in the menu, or in the
 window's Shortcut section, to disable it.
 
+### Paste the last dictation again
+
+If a dictation didn't land where you wanted, put the cursor in the right place
+and choose **Paste Last Dictation** from the menu bar icon, or **Copy Last
+Dictation** to put it on the clipboard. HeyVedu keeps only the most recent
+result, in memory, and forgets it five minutes after you dictated it.
+
+When nothing that accepts text has focus (a button or a file list, for
+example), HeyVedu doesn't paste. It leaves the text on the clipboard and says
+so; press **Command + V** where you want it.
+
+The text goes to the app you were in when you finished speaking. If another app
+comes to the front while HeyVedu is still transcribing, HeyVedu switches back
+before pasting. If that app has quit, the text is left on the clipboard instead.
+
 ## Settings
 
 Settings live in the HeyVedu window. Click the Dock icon, or choose **Open
@@ -236,13 +252,14 @@ Microphone → in-memory audio → on-device Parakeet → on-device Vedu Scribe 
 | Recorded audio | Memory only; stays on-device | Memory only; stays on-device |
 | Speech recognition | On-device | On-device |
 | Transcript cleanup | On-device | On-device |
-| Dictation history | Not stored | Not stored |
+| Dictation history | Not stored; the last result stays in memory for 5 minutes | Not stored; the last result stays in memory for 5 minutes |
 | Personal dictionary | Your words only, on disk | Your words only, on disk |
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
 **Command + V**, and restoring the previous clipboard contents after roughly
 half a second. Clipboard managers are asked to treat this entry as transient,
-but their behavior is outside the app's control.
+but their behavior is outside the app's control. When nothing that accepts text
+has focus, the text is left on the clipboard as a normal copy instead.
 
 Debug builds write timing and error diagnostics to
 `~/Library/Logs/HeyVedu/debug.log`. Audio, transcripts, and typed
@@ -276,7 +293,9 @@ compilation can take longer than later launches.
 ### Dictation is transcribed but not inserted
 
 Confirm Accessibility access is enabled. The app simulates **Command + V**, so
-the target application must accept paste at the current cursor position.
+the target application must accept paste at the current cursor position. The
+text isn't lost: choose **Paste Last Dictation** or **Copy Last Dictation** from
+the menu bar icon within five minutes.
 
 ### Apple Intelligence is unavailable
 
