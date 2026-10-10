@@ -125,9 +125,11 @@ the window's Home page to see the guide again.
    paste the result at the cursor.
 3. Wait until the menu says **Hold ⌃⌥ to dictate**.
 
-The first launch downloads and prepares two models:
+The first launch downloads and prepares these models:
 
 - Parakeet speech recognition: about 600 MB
+- Silero voice activity detection, which finds where you're speaking: about 1 MB,
+  fetched after Parakeet
 - Vedu Scribe transcript cleanup: about 560 MB
 
 These downloads come from Hugging Face. They contain model files only; no audio
@@ -160,9 +162,13 @@ previous one is being processed.
 For longer dictation, double-tap the shortcut instead of holding it. The
 floating indicator shows a lock while HeyVedu keeps listening. Press the
 shortcut once more to finish, or press **Escape** to cancel. You can type while
-it listens; only Escape cancels. A hands-free recording stops by itself after
-10 minutes. Turn off **Double-Tap for Hands-Free** in the menu, or in the
-window's Shortcut section, to disable it.
+it listens; only Escape cancels.
+
+A hands-free recording also finishes by itself once you've been quiet for 10
+seconds. Change that, or turn it off, with **Stop when you go quiet** in the
+window's Shortcut section. Either way it stops after 10 minutes. Turn off
+**Double-Tap for Hands-Free** in the menu, or in the Shortcut section, to
+disable hands-free dictation.
 
 ### Paste the last dictation again
 
@@ -311,7 +317,9 @@ This gives the device time to switch into its microphone profile.
 
 ## How it works
 
-HeyVedu records 16 kHz mono audio in memory with AVAudioEngine. FluidAudio
+HeyVedu records 16 kHz mono audio in memory with AVAudioEngine. While you
+speak, Silero voice activity detection scores each quarter second for speech;
+silence before and after you speak is trimmed before recognition. FluidAudio
 runs Parakeet through Core ML for speech recognition. The selected cleanup
 engine normalizes the transcript, personal dictionary replacements are applied,
 then the app temporarily uses the clipboard to paste the result into the

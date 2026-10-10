@@ -42,9 +42,18 @@ final class AudioRecorder {
         }
     }
 
-    /// `deviceID == nil` records from the system default input.
-    func start(deviceID: AudioDeviceID?) async throws {
-        try await session.run { try $0.start(deviceID: deviceID) }
+    /// `deviceID == nil` records from the system default input. Returns the recording's
+    /// audio in `chunkSize`-sample chunks as it is captured, in order; the stream
+    /// finishes when the recording stops.
+    func start(deviceID: AudioDeviceID?, chunkSize: Int) async throws -> AsyncStream<[Float]> {
+        let (chunks, continuation) = AsyncStream<[Float]>.makeStream()
+        do {
+            try await session.run { try $0.start(deviceID: deviceID, chunks: continuation, chunkSize: chunkSize) }
+        } catch {
+            continuation.finish()
+            throw error
+        }
+        return chunks
     }
 
     /// Stops capture and returns everything recorded so far.
@@ -103,17 +112,25 @@ private nonisolated final class CaptureSession: @unchecked Sendable {
 
     // MARK: - Queue-confined operations
 
-    func start(deviceID: AudioDeviceID?) throws {
+    func start(deviceID: AudioDeviceID?, chunks: AsyncStream<[Float]>.Continuation, chunkSize: Int) throws {
         teardownEngine()
+        processor?.finishChunks()
         self.deviceID = deviceID
         restartCount = 0
-        processor = CaptureProcessor(sink: sink)
-        try startEngineWithRetry()
+        processor = CaptureProcessor(sink: sink, chunks: chunks, chunkSize: chunkSize)
+        do {
+            try startEngineWithRetry()
+        } catch {
+            processor?.finishChunks()
+            processor = nil
+            throw error
+        }
     }
 
     func stop() -> [Float] {
         teardownEngine()
         let samples = processor?.drain() ?? []
+        processor?.finishChunks()
         processor = nil
         return samples
     }
@@ -226,13 +243,19 @@ private nonisolated final class CaptureProcessor: @unchecked Sendable {
         channels: 1,
         interleaved: false
     )!
+    private let chunks: AsyncStream<[Float]>.Continuation
+    private let chunkSize: Int
     private let lock = NSLock()
     private var converter: AVAudioConverter?
     private var samples: [Float] = []
+    /// Start of the audio not yet sent as a chunk.
+    private var chunkedUpTo = 0
     private var receivedAudio = false
 
-    init(sink: (@Sendable (CaptureSession.Event) -> Void)?) {
+    init(sink: (@Sendable (CaptureSession.Event) -> Void)?, chunks: AsyncStream<[Float]>.Continuation, chunkSize: Int) {
         self.sink = sink
+        self.chunks = chunks
+        self.chunkSize = chunkSize
         samples.reserveCapacity(Int(Recording.sampleRate) * 30)
     }
 
@@ -245,6 +268,11 @@ private nonisolated final class CaptureProcessor: @unchecked Sendable {
         if let converted {
             samples.append(contentsOf: converted)
             receivedAudio = true
+            // Yielded under the lock so chunks keep their order.
+            while samples.count - chunkedUpTo >= chunkSize {
+                chunks.yield(Array(samples[chunkedUpTo..<chunkedUpTo + chunkSize]))
+                chunkedUpTo += chunkSize
+            }
         }
         lock.unlock()
 
@@ -258,7 +286,13 @@ private nonisolated final class CaptureProcessor: @unchecked Sendable {
         defer { lock.unlock() }
         let result = samples
         samples = []
+        chunkedUpTo = 0
         return result
+    }
+
+    /// Ends the chunk stream; a partial last chunk is not sent.
+    func finishChunks() {
+        chunks.finish()
     }
 
     /// Must be called with `lock` held.

@@ -272,6 +272,15 @@ private struct ShortcutSettings: View {
                     Text("Double-tap for hands-free")
                     Text("Double-tap the shortcut to keep recording without holding it. Press it again to finish.")
                 }
+                Picker(selection: $controller.handsFreeSilenceStop) {
+                    ForEach(DictationController.handsFreeSilenceStopChoices, id: \.self) { seconds in
+                        Text(seconds == 0 ? "Never" : "After \(seconds) seconds").tag(seconds)
+                    }
+                } label: {
+                    Text("Stop when you go quiet")
+                    Text("Finish a hands-free dictation by itself once you've stopped talking.")
+                }
+                .disabled(!controller.handsFreeEnabled)
             }
         }
         .formStyle(.grouped)

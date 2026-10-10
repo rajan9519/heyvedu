@@ -17,6 +17,7 @@ final class DictationController {
     let speechModel = SpeechModel()
     let cleaner = TextCleaner()
     let dictionary = PersonalDictionary()
+    let voiceActivity = VoiceActivity()
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
@@ -37,6 +38,12 @@ final class DictationController {
             hotkeyMonitor.handsFreeEnabled = handsFreeEnabled
         }
     }
+
+    /// Seconds of silence after which a hands-free recording finishes by itself; 0 is off.
+    var handsFreeSilenceStop = UserDefaults.standard.object(forKey: DictationController.handsFreeSilenceStopKey) as? Int ?? 10 {
+        didSet { UserDefaults.standard.set(handsFreeSilenceStop, forKey: Self.handsFreeSilenceStopKey) }
+    }
+    static let handsFreeSilenceStopChoices = [0, 5, 10, 20, 30]
 
     /// Stops listening for the hotkey, e.g. while the user records a new one.
     var hotkeySuspended: Bool {
@@ -68,12 +75,15 @@ final class DictationController {
     @ObservationIgnored private var cleanupReadyNoticePending = false
     /// Ends a hands-free recording that runs past `handsFreeLimit`.
     @ObservationIgnored private var handsFreeLimitTask: Task<Void, Never>?
+    /// Scores the current recording for speech; nil when VAD isn't loaded.
+    @ObservationIgnored private var speechTracker: SpeechTracker?
     /// Forgets `lastResult` once it expires.
     @ObservationIgnored private var lastResultExpiryTask: Task<Void, Never>?
 
     private static let minimumDuration: TimeInterval = 0.2
     private static let handsFreeLimit: Duration = .seconds(10 * 60)
     private static let handsFreeKey = "handsFreeEnabled"
+    private static let handsFreeSilenceStopKey = "handsFreeSilenceStop"
     private static let lastResultLifetime: Duration = .seconds(5 * 60)
     /// Lets the menu close and focus return to the previous app before ⌘V is sent.
     private static let menuDismissDelay: Duration = .milliseconds(250)
@@ -145,7 +155,11 @@ final class DictationController {
             self?.finishRecording()
         }
 
-        speechModel.onReady = { [weak self] in self?.showLaunchHintIfNeeded() }
+        speechModel.onReady = { [weak self] in
+            self?.showLaunchHintIfNeeded()
+            // A small extra download, made once the user has agreed to the speech model's.
+            self?.voiceActivity.prepare()
+        }
         if downloadModels || speechModel.isDownloaded { speechModel.prepare() }
         cleaner.onDownloadedModelReady = { [weak self] in self?.cleanupModelReady() }
         if downloadModels || !cleaner.needsDownload { cleaner.warmUp() }
@@ -304,7 +318,12 @@ final class DictationController {
         }
         Task {
             do {
-                try await recorder.start(deviceID: deviceID)
+                let chunks = try await recorder.start(deviceID: deviceID, chunkSize: VoiceActivity.chunkSize)
+                // The press may have been released or cancelled while the engine started;
+                // the stream is already finished then, so the tracker ends on its own.
+                guard status == .recording else { return }
+                speechTracker = voiceActivity.track(chunks)
+                speechTracker?.onSilence = { [weak self] silence in self?.silenceUpdated(silence) }
             } catch {
                 DebugTrace.write("controller: start failed: \(error.localizedDescription)")
                 logger.error("Failed to start recording: \(error.localizedDescription, privacy: .public)")
@@ -325,7 +344,27 @@ final class DictationController {
             cleaner.discardPrepared()
             Task { await recorder.cancel() }
         }
+        speechTracker = nil
         hud.hide()
+    }
+
+    /// Finishes a hands-free recording once the user has been quiet long enough.
+    private func silenceUpdated(_ silence: TimeInterval) {
+        guard isHandsFree, status == .recording, handsFreeSilenceStop > 0,
+              silence >= TimeInterval(handsFreeSilenceStop) else { return }
+        DebugTrace.write("controller: hands-free stopped after \(Int(silence))s of silence")
+        finishRecording()
+    }
+
+    /// Drops leading and trailing silence, so the model doesn't invent words for it.
+    /// Returns the recording unchanged when VAD isn't available or heard no speech.
+    private func trimSilence(_ recording: Recording, tracker: SpeechTracker?) async -> Recording {
+        guard let probabilities = await tracker?.finish(),
+              let range = SpeechTrim.range(probabilities: probabilities, sampleCount: recording.samples.count),
+              range.count < recording.samples.count else { return recording }
+        let trimmed = Recording(samples: Array(recording.samples[range]))
+        DebugTrace.write("vad: trimmed \(String(format: "%.2f", recording.duration))s to \(String(format: "%.2f", trimmed.duration))s")
+        return trimmed
     }
 
     private func finishRecording() {
@@ -335,11 +374,15 @@ final class DictationController {
         let target = PasteTarget.current()
         hud.showProcessing("Transcribing…")
 
+        let tracker = speechTracker
+        speechTracker = nil
+
         Task {
             defer { status = .idle }
-            let recording = await recorder.stop()
-            DebugTrace.write("controller: finish, captured \(String(format: "%.2f", recording.duration))s")
-            logger.notice("Recording finished: \(recording.duration, format: .fixed(precision: 2), privacy: .public)s captured")
+            let captured = await recorder.stop()
+            let recording = await trimSilence(captured, tracker: tracker)
+            DebugTrace.write("controller: finish, captured \(String(format: "%.2f", captured.duration))s")
+            logger.notice("Recording finished: \(captured.duration, format: .fixed(precision: 2), privacy: .public)s captured")
 
             guard recording.duration >= Self.minimumDuration else {
                 cleaner.discardPrepared()
