@@ -15,51 +15,97 @@ navLinks?.addEventListener('click', (event) => {
 });
 
 // ---------- App mockups ----------
+const ic = (n, c = '') => `<svg class="i ${c}" aria-hidden="true"><use href="assets/app-icons.svg#${n}"/></svg>`;
+const lights = '<span class="lights"><i></i><i></i><i></i></span>';
 const apps = {
   slack: () => `
     <div class="app slack">
-      <aside><div class="ws"><span class="lights"><i></i><i></i><i></i></span></div><div class="ws">Northwind</div>
-        <div class="ch"># general</div><div class="ch on"># design-review</div><div class="ch"># launch</div><div class="ch"># random</div></aside>
-      <main><div class="hd"># design-review <span style="color:#999;font-weight:400;font-size:12px">12 members</span></div>
-        <div class="feed" id="feed">
-          <div class="msg"><div class="av" style="background:#e8912d">M</div><div><b>Maya</b><time>10:42</time><p>QA flagged two issues in the new onboarding. Still OK to ship this week?</p></div></div>
-          <div class="msg"><div class="av" style="background:#2bac76">L</div><div><b>Leo</b><time>10:44</time><p>Fixes are in review. Your call 👀</p></div></div>
-        </div>
-        <div class="composer" id="box"><span class="ins"></span><span class="caret"></span><span class="send"></span></div></main>
+      <div class="top">${lights}<span class="nav">${ic('arrow-left')}${ic('arrow-right')}${ic('clock')}</span>
+        <div class="search">${ic('search')}Search Northwind</div><span class="nav"></span></div>
+      <div class="body">
+        <nav class="rail"><div class="wsi">N</div>
+          <div class="ri on"><span>${ic('home')}</span>Home</div><div class="ri"><span>${ic('message-circle')}</span>DMs</div>
+          <div class="ri"><span>${ic('bell')}</span>Activity</div><div class="ri"><span>${ic('dots')}</span>More</div></nav>
+        <aside><div class="ws">Northwind ${ic('chevron-down')}<span class="new">${ic('edit')}</span></div>
+          <div class="sec">${ic('chevron-down')}Channels</div>
+          <div class="ch"><b>#</b>general</div><div class="ch on"><b>#</b>design-review</div><div class="ch"><b>#</b>launch</div><div class="ch"><b>#</b>random</div>
+          <div class="sec">${ic('chevron-down')}Direct messages</div>
+          <div class="ch"><i class="mini" style="background:#e8912d">M</i>Maya Chen</div><div class="ch"><i class="mini" style="background:#2bac76">L</i>Leo Park</div></aside>
+        <main><div class="hd"><b># design-review ${ic('chevron-down')}</b><span class="mem"><i style="background:#e8912d"></i><i style="background:#2bac76"></i><i style="background:#5267ff"></i>12</span><span class="hud-btn">${ic('headphones')}${ic('chevron-down')}</span></div>
+          <div class="tabsr"><span class="on">${ic('message-circle')}Messages</span><span>${ic('plus')}</span></div>
+          <div class="feed" id="feed">
+            <div class="msg"><div class="av" style="background:#e8912d">M</div><div><b>Maya Chen</b><time>10:42 AM</time><p>QA flagged two issues in the new onboarding. Still OK to ship this week?</p></div></div>
+            <div class="msg"><div class="av" style="background:#2bac76">L</div><div><b>Leo Park</b><time>10:44 AM</time><p>Fixes are in review. Your call 👀</p></div></div>
+          </div>
+          <div class="composer" id="box">
+            <div class="fmt">${ic('bold')}${ic('italic')}${ic('strikethrough')}<em></em>${ic('link')}<em></em>${ic('list-numbers')}${ic('list')}<em></em>${ic('code')}</div>
+            <div class="txt"><span class="ins"></span><span class="caret"></span><span class="ph">Message #design-review</span></div>
+            <div class="acts"><span class="plus">${ic('plus')}</span>${ic('typography')}${ic('mood-smile')}${ic('at')}<em></em>${ic('video')}${ic('microphone')}<em></em>${ic('slash')}
+              <span class="send">${ic('send')}<em></em>${ic('chevron-down')}</span></div>
+          </div></main>
+      </div>
     </div>`,
   notes: () => `
     <div class="app notes">
-      <aside><div class="lights" style="padding:2px 4px 14px"><i></i><i></i><i></i></div>
-        <div class="n on"><b>Weekend trip</b><span>Today</span></div><div class="n"><b>Book club picks</b><span>Yesterday</span></div><div class="n"><b>Gift ideas</b><span>Oct 2</span></div></aside>
-      <main><div class="date">October 10, 2026 at 9:14 AM</div><h3>Weekend trip</h3><div><span class="ins"></span><span class="caret"></span></div></main>
+      <aside><div class="tb">${lights}${ic('layout-sidebar')}</div>
+        <div class="grp">iCloud</div>
+        <div class="f">${ic('folder')}All iCloud<span>24</span></div><div class="f on">${ic('folder')}Notes<span>18</span></div><div class="f">${ic('folder')}Travel<span>6</span></div><div class="f">${ic('trash')}Recently Deleted<span>2</span></div></aside>
+      <div class="list"><div class="tb">${ic('layout-list')}${ic('layout-grid')}<span class="sp"></span>${ic('trash')}</div>
+        <div class="grp">Today</div>
+        <div class="n on"><b>Weekend trip</b><span><time>9:14 AM</time>Packing list</span></div>
+        <div class="grp">Previous 7 Days</div>
+        <div class="n"><b>Book club picks</b><span><time>Tuesday</time>The Overstory, Piranesi</span></div>
+        <div class="n"><b>Gift ideas</b><span><time>10/2/26</time>Dad: espresso grinder</span></div></div>
+      <main><div class="tb">${ic('edit')}<span class="sp"></span>${ic('typography')}${ic('list-check')}${ic('table')}${ic('paperclip')}<span class="sp"></span>${ic('lock')}${ic('upload')}${ic('search')}</div>
+        <div class="doc"><div class="date">October 10, 2026 at 9:14 AM</div><h3>Weekend trip</h3><div><span class="ins"></span><span class="caret"></span></div></div></main>
     </div>`,
   mail: () => `
     <div class="app mail">
-      <div class="bar"><span class="lights"><i></i><i></i><i></i></span>New Message<span class="sendb">↑</span></div>
-      <div class="f">To: <span class="chip">Priya Raman</span></div>
-      <div class="f">Subject: <b>Q4 deck</b></div>
+      <div class="tb">${lights}<span class="sendb" id="box">${ic('send')}</span><span class="title">Q4 deck</span>
+        <span class="tools">${ic('paperclip')}${ic('typography')}${ic('mood-smile')}${ic('photo')}</span></div>
+      <div class="f"><label>To:</label><span class="chip">Priya Raman</span><span class="add">${ic('circle-plus')}</span></div>
+      <div class="f"><label>Cc:</label></div>
+      <div class="f"><label>Subject:</label>Q4 deck</div>
+      <div class="f"><label>From:</label>Rajan Singh – rajan@northwind.co ${ic('chevron-down')}</div>
       <div class="body"><span class="ins"></span><span class="caret"></span></div>
     </div>`,
   ide: () => `
     <div class="app ide">
-      <div class="tree"><div class="lights" style="margin-bottom:10px"><i></i><i></i><i></i></div>▾ src<br>&nbsp; auth.ts<br>&nbsp; <span class="on">session.ts</span><br>&nbsp; api.ts<br>▸ tests<br>README.md</div>
-      <div class="code"><span class="c">// session.ts</span>
-<span class="k">export async function</span> <span class="t">refresh</span>(token) {
-  <span class="k">const</span> res = <span class="k">await</span> fetch(<span class="s">'/auth/refresh'</span>, {
+      <div class="tb">${lights}<span class="nav">${ic('arrow-left')}${ic('arrow-right')}</span><div class="cmd">${ic('search')}northwind</div><span class="nav">${ic('layout-sidebar')}${ic('settings')}</span></div>
+      <div class="body">
+        <aside><div class="acts">${ic('files', 'on')}${ic('search')}${ic('git-branch')}${ic('player-play')}${ic('layout-grid-add')}</div>
+          <div class="ttl">NORTHWIND</div>
+          <div class="fi">${ic('chevron-down')}src</div><div class="fi in"><b class="ts">TS</b>auth.ts</div><div class="fi in on"><b class="ts">TS</b>session.ts</div><div class="fi in"><b class="ts">TS</b>api.ts</div>
+          <div class="fi">${ic('chevron-down', 'r')}tests</div><div class="fi"><b class="md">${ic('markdown')}</b>README.md</div></aside>
+        <div class="ed"><div class="etabs"><span class="on"><b class="ts">TS</b>session.ts${ic('x')}</span><span><b class="ts">TS</b>api.ts</span></div>
+          <div class="crumbs">src › session.ts › <span class="t">refresh</span></div>
+          <div class="code"><div class="gut">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9</div><div><span class="k">export async function</span> <span class="fn">refresh</span>(token) {
+  <span class="k">const</span> res = <span class="k">await</span> <span class="fn">fetch</span>(<span class="s">'/auth/refresh'</span>, {
     method: <span class="s">'POST'</span>,
-    body: JSON.stringify({ token }),
+    body: JSON.<span class="fn">stringify</span>({ token }),
   })
   <span class="k">if</span> (!res.ok) <span class="k">throw new</span> <span class="t">AuthError</span>()
-  <span class="k">return</span> res.json()
-}</div>
-      <div class="chat"><div class="h">Agent</div><div class="hist"><div>How can I help with session.ts?</div></div>
-        <div class="in"><span class="ins"></span><span class="caret"></span></div></div>
+  <span class="k">return</span> res.<span class="fn">json</span>()
+}
+</div></div></div>
+        <div class="chat"><div class="h"><span class="on">New Chat</span><span class="sp"></span>${ic('plus')}${ic('history')}${ic('dots')}</div>
+          <div class="hist"></div>
+          <div class="in"><div class="ctx"><span>@</span><span><b class="ts">TS</b>session.ts</span></div>
+            <div class="txt"><span class="ins"></span><span class="caret"></span><span class="ph">Plan, search, build anything</span></div>
+            <div class="row"><span class="pill">${ic('infinity')}Agent${ic('chevron-down')}</span><span class="model">Auto${ic('chevron-down')}</span><span class="sp"></span>${ic('photo')}<span class="go">${ic('arrow-up')}</span></div></div></div>
+      </div>
+      <div class="status"><span>${ic('git-branch')}main</span><span class="sp"></span><span>Ln 2, Col 18</span><span>TypeScript</span><span>Cursor Tab</span></div>
     </div>`,
   imsg: () => `
     <div class="app imsg">
-      <div class="hd"><div class="av">S</div>Sam</div>
-      <div class="thread" id="feed"><div class="bub them">Table’s booked for 7 🍜</div><div class="bub them">You still coming?</div></div>
-      <div class="field" id="box"><span class="ins"></span><span class="caret" style="color:#0a84ff"></span></div>
+      <aside><div class="tb">${lights}<span class="sp"></span>${ic('edit')}</div>
+        <div class="search">${ic('search')}Search</div>
+        <div class="c on"><i class="av">S</i><div><b>Sam<time>10:41 AM</time></b><span>You still coming?</span></div></div>
+        <div class="c"><i class="av" style="background:linear-gradient(#f5a7c2,#e17ba1)">M</i><div><b>Mom<time>9:02 AM</time></b><span>Call me when you land 💛</span></div></div>
+        <div class="c"><i class="av" style="background:linear-gradient(#9dc5f7,#6a9be0)">P</i><div><b>Priya Raman<time>Yesterday</time></b><span>Deck attached, no rush</span></div></div></aside>
+      <main><div class="hd"><span class="sp"></span><div class="who"><i class="av">S</i>Sam</div><span class="sp r">${ic('video')}${ic('info-circle')}</span></div>
+        <div class="thread" id="feed"><div class="stamp"><b>iMessage</b><br>Today 10:41 AM</div><div class="bub them">Table’s booked for 7 🍜</div><div class="bub them tail">You still coming?</div></div>
+        <div class="bar"><span class="plus">${ic('plus')}</span><div class="field" id="box"><span class="ins"></span><span class="caret"></span><span class="ph">iMessage</span><span class="mic">${ic('microphone')}</span></div></div></main>
     </div>`
 };
 
@@ -137,8 +183,8 @@ async function play(i) {
     win.querySelector('#box')?.classList.add('ready');
     await sleep(400); if (!alive()) return;
     const feed = win.querySelector('#feed');
-    if (s.send === 'slack') feed.insertAdjacentHTML('beforeend', `<div class="msg" style="animation:pop .35s"><div class="av" style="background:#5267ff">Y</div><div><b>You</b><time>10:45</time><p>${s.out}</p></div></div>`);
-    else feed.insertAdjacentHTML('beforeend', `<div class="bub me">${s.out}</div>`);
+    if (s.send === 'slack') feed.insertAdjacentHTML('beforeend', `<div class="msg" style="animation:pop .35s"><div class="av" style="background:#5267ff">R</div><div><b>Rajan Singh</b><time>10:45 AM</time><p>${s.out}</p></div></div>`);
+    else { feed.insertAdjacentHTML('beforeend', `<div class="bub me">${s.out}</div><div class="dlv">Delivered</div>`); }
     ins.innerHTML = '';
   }
   await sleep(dur(s) - (s.send ? 1500 : 0) - s.said.reduce((n, [t]) => n + t.split(' ').length, 0) * WORD - 1650);
