@@ -4,7 +4,8 @@ Researched October 2026 from each product's website and README. Features are
 what each product says it offers; we did not test the apps hands-on.
 
 > **Status:** Phase 1 items 1.1 (configurable hotkey) and 1.2 (hands-free mode)
-> are done. **Next: 1.3, the personal dictionary.** See
+> are done. 1.3 (personal dictionary) is done except ASR biasing (a), which is
+> deferred. **Next: 1.7, the Settings window.** See
 > [§7 Implementation status](#7-implementation-status-handoff-notes) for what was
 > built, where the code is, how it was verified, and notes for the next items.
 > Update §7 and this line when you finish a roadmap item.
@@ -43,8 +44,8 @@ what each product says it offers; we did not test the apps hands-on.
 | Fully local by default | ✅ | — | ✅ | ◐ | ✅ | ✅ | ✅ | ✅ |
 | Custom hotkey | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Hands-free / toggle mode | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Custom dictionary | — | ✅ | ✅ | ✅ | ✅ | — | ✅ | ◐ |
-| Word replacements / snippets | — | ✅ | ✅ | ◐ | ✅ | — | — | — |
+| Custom dictionary | ◐ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ◐ |
+| Word replacements / snippets | ◐ | ✅ | ✅ | ◐ | ✅ | — | — | — |
 | Per-app styles | — | ✅ | ✅ | ✅ | ◐ | — | — | ✅ |
 | Edit selected text by voice | — | ✅ | ✅ | ◐ | ◐ | — | — | ✅ |
 | Spoken formatting commands | ◐ | ✅ | ◐ | ◐ | ✅ | — | — | — |
@@ -82,7 +83,7 @@ local-first strength.
 | --- | --- | --- | --- |
 | 1.1 | ✅ **Configurable hotkey, including Fn/Globe and right-side modifiers** | It is a listed limitation, and every competitor offers it | Done, modifier-only (see §7). Key+modifier combos such as ⌥Space are not supported yet. The recorder is a standalone window; move it into the Settings window when 1.7 lands |
 | 1.2 | ✅ **Hands-free mode: double-tap to lock, tap to stop** | For long dictation. Hex, Handy and Flow all have it | Done (see §7). Still missing: an elapsed timer in the HUD, and auto-stop on silence, which comes with 1.5 |
-| 1.3 | **Personal dictionary, rebuilt** | The top request across the category. We just removed ours | (a) Bias the ASR with FluidAudio's `CustomVocabularyContext`, which the pinned checkout already has (CTC keyword boosting). (b) Apply exact replacement rules *after* cleanup so Vedu Scribe cannot drop them (`teh → the`, `hey vedu → HeyVedu`). (c) Mark dictionary terms as protected so the cleanup guard rejects any output that changes them |
+| 1.3 | ◐ **Personal dictionary, rebuilt** (b and c done; a deferred, see §7) | The top request across the category. We just removed ours | (a) Bias the ASR with FluidAudio's `CustomVocabularyContext`, which the pinned checkout already has (CTC keyword boosting). (b) Apply exact replacement rules *after* cleanup so Vedu Scribe cannot drop them (`teh → the`, `hey vedu → HeyVedu`). (c) Mark dictionary terms as protected so the cleanup guard rejects any output that changes them |
 | 1.4 | **Paste the last result again, and recover from failed pastes** | Paste fails in fields that block it, and users lose their words | Keep only the last result in memory and clear it after about 5 minutes. Add a menu item and an optional hotkey. When the paste target has no focused text field (checked through AX), show a "Copied, press ⌘V" HUD and leave the text on the clipboard |
 | 1.5 | **Voice activity detection: trim silence and auto-stop in hands-free mode** | Lower latency, fewer hallucinations on near-silent clips | FluidAudio `VadManager`. Trim leading and trailing silence before ASR |
 | 1.6 | **Audio cues and a better HUD** | Feedback without looking at the HUD. Both Handy and Flow have it | Optional start/stop/cancel sounds, a live input-level meter, and a choice of HUD position, including the notch |
@@ -121,8 +122,8 @@ cost more than they are worth right now.
 ## 5. Suggested order
 
 1. ~~**1.1 + 1.2** (hotkey, hands-free)~~: done, see §7
-2. **1.3** ← **next** (dictionary): the most-requested feature, and it fills the gap from the recent removal
-3. **1.7** (settings window): needed before more settings arrive
+2. ~~**1.3** (dictionary)~~: replacements and guard done; ASR biasing deferred, see §7
+3. **1.7** ← **next** (settings window): needed before more settings arrive
 4. **1.4, 1.5, 1.6**: polish
 5. **2.1 + 2.2 + 2.3**: app styles, formatting and snippets share one post-processing pipeline, so build them together
 6. **2.4** rewrite mode, then **2.5** languages
@@ -138,8 +139,8 @@ cost more than they are worth right now.
 
 ## 7. Implementation status (handoff notes)
 
-Last updated 2026-10-07. **Phase 1 progress: 1.1 and 1.2 are done. Next up: 1.3
-(personal dictionary), then 1.7, 1.4, 1.5, 1.6.**
+Last updated 2026-10-09. **Phase 1 progress: 1.1, 1.2 and 1.3 are done. Next up:
+1.7, then 1.4, 1.5, 1.6. 1.3 (a) ASR biasing is deferred.**
 
 The 1.1/1.2 work is committed on `main` in the commit "Add configurable dictation
 shortcut and hands-free mode".
@@ -210,6 +211,92 @@ Code:
 - `RecordingHUD.showRecording(…, handsFree:)` sets `HUDModel.handsFree`, which
   switches the listening icon to `lock.fill`.
 
+### 1.3 Personal dictionary: layers (b) and (c) done, (a) deferred
+
+Pipeline: transcribe → cleanup with (c) guard → (b) replacements → paste.
+
+What the user sees:
+- Menu item **Dictionary…** (shows the word count once there are entries) opens a
+  window. Each entry is a **Word** (the exact spelling) and optional **Also heard
+  as** alternatives, added one at a time as chips (Return or +), so an
+  alternative can contain a comma ("Hey, we do"). Return on an empty alternative
+  field saves the word. Entries can be edited and deleted. A **Try it** field
+  shows the replacements applied to a sample sentence (dictating into it works too).
+- After cleanup (or on the raw transcript when cleanup is off), every match of a
+  word or one of its alternatives is rewritten to the word. Matching ignores case,
+  needs whole words (no letter or digit on either side) and lets a phrase's words
+  be separated by spaces and punctuation (`, . ; : ! ? - – —`), so "hey we do"
+  also matches "Hey, we do." Longest phrase wins. A word that is all lowercase
+  ("the") keeps a leading capital from the match ("Teh" → "The"); any other word
+  is written exactly.
+- If a cleanup chunk loses a dictionary word that its transcript had, that chunk
+  is pasted raw (and polished with `TextPolish.finalize` for Vedu Scribe). The HUD
+  says "Pasted raw text — cleanup changed a dictionary word". The reason doesn't
+  name the word because fallback reasons go to the debug log.
+- Known tradeoff: a self-correction that legitimately drops a listed word ("send
+  it to Priya, no wait, Alex") now pastes raw text for that chunk.
+
+Code:
+- `HeyVedu/Dictionary/PersonalDictionary.swift`: `PersonalDictionary`
+  (observable, `entries` persisted as JSON in
+  `Application Support/HeyVedu/Dictionary.json`) and `DictionaryMatcher`
+  (nonisolated, precompiled single regex with one capture group per phrase).
+  `apply(to:)` does replacements; `missingTerm(from:in:)` is the guard.
+- `HeyVedu/Dictionary/DictionaryWindow.swift`: `DictionaryWindowController` plus
+  a SwiftUI editor (chips via a small `FlowLayout`). Move it into the Settings
+  window's Dictionary tab with 1.7.
+- `TextCleaner.clean(_:dictionary:)` runs the guard on every chunk, before
+  `OutputGuard` and also for normalizer backends (which skip `OutputGuard`).
+- `DictationController.dictionary`; `finishRecording` passes `dictionary.matcher`
+  to cleanup and applies it to the output before pasting.
+
+Verification: Debug build succeeds. A headless harness (not in the repo; it
+compiled `PersonalDictionary.swift` with a test `main.swift`) passed 23 checks:
+alternatives (including commas and periods between words), longest match,
+casing, partial-word rejection, terms with punctuation (C++, Node.js), Unicode,
+the guard (kept, alias to term, lost, empty output) and save/load. The window was
+checked from screenshots in light and dark mode. **Not yet tried with live
+dictation in the running app.**
+
+Still open: import/export of the dictionary, and a unit-test target for the matcher.
+
+#### 1.3 (a) ASR biasing: tried, then removed (2026-10-09)
+
+A CTC-boosting version was built and evaluated, then removed because we weren't
+confident enough in it to ship on by default. Notes for picking it back up:
+
+- Approach: parakeet-ctc-110m (~105 MB, `CtcModels.download(variant: .ctc110m)`)
+  scores dictionary terms against the audio; FluidAudio's `VocabularyRescorer.ctcTokenRescore`
+  replaces transcript spans. Needs the transcript's `ASRResult.tokenTimings`, so
+  `Transcriber` would return text + timings.
+- FluidAudio 0.17.1 problems found (worth reporting upstream before reusing it):
+  1. `CtcKeywordSpotter` copies audio into a new fixed 15 s `MLMultiArray` and
+     assumes the rest is zero. Core ML doesn't zero it, so any window under 15 s
+     ran on leftover memory: log-probs were NaN (CPU) or noise, giving confident
+     false replacements that changed from run to run.
+  2. Its default `.cpuAndNeuralEngine` gives noise for this model on the Neural
+     Engine (macOS 26, Apple silicon) even with correct input; CPU and GPU decode
+     the speech correctly.
+  3. It moves audio in and logits out one `NSNumber` at a time (~280 ms per short
+     dictation). Doing our own mel + encoder inference with direct buffer access
+     (and real zero padding) brought rescoring to ~56 ms mean, 94 ms max.
+  4. The default rescorer config fires on acoustics alone; its opt-in floors
+     (`spotterRescueMinSimilarity: 0.30`, `spotterRescueMultiWordMinSimilarity: 0.50`)
+     were needed.
+- Evaluation (macOS `say`, 6 voices: US, UK, AU, IE, IN, ZA; 19-term dictionary):
+  - With fixes 1–4: term sentences WER 21.3% → 11.9%, but **27 of 270 control
+    clips (10%) damaged**, all real words that sound like terms: "Ryan" → Rajan,
+    "Spark plugs" → "Sparkle plugs", "the Queen" → "the Qwen", "database" →
+    Supabase, "Hey, we do need…" → "HeyVedu do need…".
+  - Adding a rule "never replace a span made only of real words (NSSpellChecker)
+    unless it's the term split apart ('fluid audio')": term WER 21.3% → 15.9%
+    (0 worse), terms right 93 → 140 of 258, controls 2 of 270 changed, and a
+    held-out set of 360 new control clips: 2 changed (0.6%), both already non-words.
+  - Not tested on real voices — the main reason it was deferred.
+- Applying replacements: use the original transcript, not the rescorer's text (it
+  drops punctuation); replacements arrive out of text order; skip spans that
+  already contain the term plus other words ("Siobhan asked" → "Siobhan").
+
 ### Verification so far
 
 - `xcodebuild` Debug build succeeds.
@@ -233,11 +320,8 @@ Code:
 
 ### Notes for the next features
 
-- **1.3 Dictionary:** the earlier vocabulary feature was removed in `f6883a6`
-  because Vedu Scribe ignored it. Don't route terms through the cleanup prompt
-  only. Use FluidAudio's `CustomVocabularyContext`
-  (`build/SourcePackages/checkouts/FluidAudio/Sources/FluidAudio/ASR/Parakeet/SlidingWindow/CustomVocabulary/`)
-  and deterministic post-cleanup replacements.
+- **1.3 (a) ASR biasing:** start from the "tried, then removed" notes in the 1.3
+  section, and test on real voices before shipping it on by default.
 - **1.7 Settings window:** move the shortcut recorder and hands-free toggle into
   it. The menu should keep only status and quick toggles.
 - **1.5 VAD:** use it to add auto-stop on silence for hands-free mode, and to

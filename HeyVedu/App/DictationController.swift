@@ -16,6 +16,7 @@ final class DictationController {
     let devices = AudioDeviceManager()
     let speechModel = SpeechModel()
     let cleaner = TextCleaner()
+    let dictionary = PersonalDictionary()
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
@@ -353,13 +354,15 @@ final class DictationController {
                 if cleaner.isEnabled {
                     hud.showProcessing("Cleaning…")
                     let started = ContinuousClock.now
-                    let result = await cleaner.clean(trimmed)
+                    let result = await cleaner.clean(trimmed, dictionary: dictionary.matcher)
                     output = result.text
                     fallbackReason = result.fallbackReason
                     awaitingDownload = result.awaitingDownload
                     // Timing and fallback reason only — never the text itself.
                     DebugTrace.write("cleanup[\(cleaner.engine.rawValue)]: \(ContinuousClock.now - started)\(fallbackReason.map { ", fallback: \($0)" } ?? "")")
                 }
+                // After cleanup, so the model can't undo the user's spellings.
+                output = dictionary.matcher.apply(to: output)
                 hud.hide()
                 guard !output.isEmpty else {
                     // Vedu Scribe drops filler-only speech ("um") entirely.

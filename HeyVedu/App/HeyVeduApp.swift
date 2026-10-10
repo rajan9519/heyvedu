@@ -10,7 +10,8 @@ struct HeyVeduApp: App {
                 controller: appDelegate.controller,
                 updates: appDelegate.updates,
                 showWelcomeGuide: { appDelegate.onboarding.show() },
-                recordShortcut: { appDelegate.hotkeyRecorder.show() }
+                recordShortcut: { appDelegate.hotkeyRecorder.show() },
+                editDictionary: { appDelegate.dictionaryWindow.show() }
             )
         } label: {
             if appDelegate.controller.menuBarSymbol == "mic" {
@@ -39,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let updates = UpdateController()
     lazy var onboarding = OnboardingWindowController(controller: controller)
     lazy var hotkeyRecorder = HotkeyRecorderWindowController(controller: controller)
+    lazy var dictionaryWindow = DictionaryWindowController(dictionary: controller.dictionary)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         #if DEBUG

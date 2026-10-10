@@ -5,6 +5,7 @@ struct MenuContent: View {
     let updates: UpdateController
     let showWelcomeGuide: () -> Void
     let recordShortcut: () -> Void
+    let editDictionary: () -> Void
 
     var body: some View {
         Text(controller.statusText)
@@ -44,6 +45,8 @@ struct MenuContent: View {
                 }
             }
         }
+
+        Button(dictionaryTitle, action: editDictionary)
 
         Divider()
 
@@ -105,6 +108,11 @@ struct MenuContent: View {
             get: { controller.devices.selectedDeviceUID },
             set: { controller.devices.selectedDeviceUID = $0 }
         )
+    }
+
+    private var dictionaryTitle: String {
+        let count = controller.dictionary.entries.count
+        return count == 0 ? "Dictionary…" : "Dictionary (\(count) \(count == 1 ? "word" : "words"))…"
     }
 
     private var systemDefaultLabel: String {
