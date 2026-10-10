@@ -316,12 +316,21 @@ final class AppleIntelligenceBackend: CleanupBackend {
     /// about as long as the input, so each chunk gets under half the remaining context.
     func chunks(of text: String, instructions: String) async -> [String] {
         // Measure the instructions rather than assume their size.
-        let instructionTokens = (try? await model.tokenCount(for: instructions)).map { $0 + 50 }
+        let instructionTokens = await tokenCount(for: instructions).map { $0 + 50 }
             ?? Self.instructionsTokenAllowance
         let budget = max(256, (model.contextSize - instructionTokens) / 2)
-        return await SentenceChunker.chunks(of: text, budget: budget) { [model] in
-            try? await model.tokenCount(for: $0)
+        return await SentenceChunker.chunks(of: text, budget: budget) { [self] in
+            await tokenCount(for: $0)
         }
+    }
+
+    /// Exact count on macOS 26.4+, where the model can count tokens; before that, an
+    /// overestimate (~3 characters per token) so chunks still fit the context window.
+    private func tokenCount(for text: String) async -> Int? {
+        if #available(macOS 26.4, *) {
+            return try? await model.tokenCount(for: text)
+        }
+        return text.count / 3 + 1
     }
 }
 

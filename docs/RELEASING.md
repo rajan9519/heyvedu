@@ -1,7 +1,7 @@
 # Building and distributing HeyVedu
 
 This workflow produces an **Apple silicon (arm64)** drag-to-Applications DMG.
-Intel Macs are not supported. The app still requires **macOS 26.4 or later**;
+Intel Macs are not supported. The app still requires **macOS 26 or later**;
 signing and notarization do not change these hardware or OS requirements.
 
 ## Prerequisites
@@ -243,7 +243,7 @@ release. No Apple credentials are required.
 
 ## Release verification
 
-On an Apple silicon Mac running macOS 26.4 or later:
+On an Apple silicon Mac running macOS 26 or later:
 
 1. Download the final signed DMG through a browser, so the normal quarantine and
    Gatekeeper checks run. Test on a separate user account or Mac if possible.

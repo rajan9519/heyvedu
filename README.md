@@ -35,7 +35,7 @@ For example:
 ## Requirements
 
 - An Apple silicon Mac
-- macOS 26.4 or later
+- macOS 26 or later
 - Xcode with the macOS 26.4 SDK
 - An internet connection for the initial build and first-run model downloads
 - About 1.2 GB of free space for the speech and Vedu Scribe models, plus build data
@@ -90,7 +90,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run.sh
 
 ## Build a DMG release
 
-The release script builds an **Apple silicon (arm64)** DMG for macOS 26.4 or
+The release script builds an **Apple silicon (arm64)** DMG for macOS 26 or
 later, signs the app and disk image with Developer ID, and notarizes and staples
 both. Intel Macs are not supported.
 
