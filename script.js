@@ -65,19 +65,19 @@ const apps = {
 
 // said: [text, kind]  kind: '' spoken, f filler, x retracted, c spoken command, d dictionary term
 const scenes = [
-  { app: 'slack', name: 'Slack', sub: 'Self-correction', ic: '#', color: '#4a154b', send: 'slack',
+  { app: 'slack', name: 'Slack', sub: 'Self-correction', logo: 'slack.svg', tile: '#fff', send: 'slack',
     said: [['um so','f'],['i think we should ship the new onboarding on',''],['friday actually no let’s do','x'],['monday so QA has time','']],
     out: 'I think we should ship the new onboarding on Monday so QA has time.' },
-  { app: 'notes', name: 'Notes', sub: 'Lists by voice', ic: '✎', color: '#d9a400',
+  { app: 'notes', name: 'Notes', sub: 'Lists by voice', logo: 'notes.png',
     said: [['packing list',''],['bullet point','c'],['passport',''],['bullet point','c'],['phone charger',''],['bullet point','c'],['um','f'],['sunscreen',''],['bullet point','c'],['the blue jacket','']],
     out: 'Packing list:<ul><li>Passport</li><li>Phone charger</li><li>Sunscreen</li><li>The blue jacket</li></ul>' },
-  { app: 'mail', name: 'Mail', sub: 'Formatting', ic: '✉', color: '#0a84ff',
+  { app: 'mail', name: 'Mail', sub: 'Formatting', logo: 'mail.png',
     said: [['hi priya',''],['new line','c'],['thanks for sending the deck over',''],['uh','f'],['i’ll review it by three PM tomorrow and send notes','']],
     out: 'Hi Priya,<br>Thanks for sending the deck over. I’ll review it by 3 PM tomorrow and send notes.' },
-  { app: 'ide', name: 'Code editor', sub: 'Your dictionary', ic: '&lt;/&gt;', color: '#2b2d33',
+  { app: 'ide', name: 'Cursor', sub: 'Your dictionary', logo: 'cursor_dark.svg', tile: '#14120b',
     said: [['make',''],['refresh','d'],['retry once on a',''],['four oh one',''],['and log it with',''],['sentry','d'],['then add a',''],['vitest','d'],['case','']],
     out: 'Make <code>refresh</code> retry once on a 401 and log it with <mark class="dict">Sentry</mark>, then add a <mark class="dict">Vitest</mark> case.' },
-  { app: 'imsg', name: 'Messages', sub: 'Fillers & numbers', ic: '💬', color: '#34c759', send: 'imsg',
+  { app: 'imsg', name: 'Messages', sub: 'Fillers & numbers', logo: 'messages.png', send: 'imsg',
     said: [['yes running',''],['like','f'],['ten minutes late sorry',''],['uh','f'],['order me the spicy one','']],
     out: 'Yes! Running 10 minutes late, sorry. Order me the spicy one.' }
 ];
@@ -93,7 +93,7 @@ setInterval(() => bars.forEach((b, i) => b.style.height = (speaking ? 4 + Math.a
 scenes.forEach((s, i) => {
   const b = document.createElement('button');
   b.className = 'tab'; b.role = 'tab';
-  b.innerHTML = `<span class="ic" style="background:${s.color}">${s.ic}</span><span>${s.name}<small>${s.sub}</small></span><span class="bar"><i></i></span>`;
+  b.innerHTML = `<span class="ic${s.tile ? ' tile' : ''}"${s.tile ? ` style="background:${s.tile}"` : ''}><img src="assets/apps/${s.logo}" alt=""></span><span>${s.name}<small>${s.sub}</small></span><span class="bar"><i></i></span>`;
   b.onclick = () => { paused = false; $('#pause').textContent = '❚❚ Pause'; $('#pause').setAttribute('aria-pressed', 'false'); play(i); };
   tabsEl.appendChild(b);
 });
@@ -177,8 +177,8 @@ document.querySelectorAll('[data-loop]').forEach((m, i) => {
 });
 
 // ---------- Marquee ----------
-const list = ['Slack', 'Notes', 'Mail', 'Messages', 'Cursor', 'VS Code', 'Xcode', 'Notion', 'Linear', 'Google Docs', 'ChatGPT', 'Claude', 'Obsidian', 'Terminal', 'Figma', 'Gmail', 'WhatsApp', 'Discord'];
-$('#apps').innerHTML = [...list, ...list].map(a => `<span>${a}</span>`).join('');
+const list = [['Slack', 'slack.svg'], ['Notes', 'notes.png'], ['Mail', 'mail.png'], ['Messages', 'messages.png'], ['Cursor', 'cursor_dark.svg'], ['VS Code', 'vscode.svg'], ['Xcode', 'xcode.png'], ['Notion', 'notion.svg'], ['Linear', 'linear.svg'], ['Google Docs', 'google-docs.svg'], ['ChatGPT', 'openai.svg'], ['Claude', 'claude-ai-icon.svg'], ['Obsidian', 'obsidian.svg'], ['Terminal', 'terminal.png'], ['Figma', 'figma.svg'], ['Gmail', 'gmail.svg'], ['WhatsApp', 'whatsapp.svg'], ['Discord', 'discord.svg']];
+$('#apps').innerHTML = [...list, ...list].map(([a, f]) => `<span${f.endsWith('.png') ? ' class="mac"' : ''}><img src="assets/apps/${f}" alt="" loading="lazy">${a}</span>`).join('');
 
 // ---------- Reveal + race ----------
 const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .15 });
