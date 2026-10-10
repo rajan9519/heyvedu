@@ -206,7 +206,7 @@ private struct GeneralSettings: View {
                     Text("Removes filler words, applies your self-corrections and fixes punctuation.")
                 }
                 Picker("Cleanup engine", selection: $cleaner.engine) {
-                    ForEach(TextCleaner.Engine.allCases) { engine in
+                    ForEach(TextCleaner.Engine.supported) { engine in
                         Text(engine.title).tag(engine)
                     }
                 }

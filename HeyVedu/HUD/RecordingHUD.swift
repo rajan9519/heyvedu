@@ -133,7 +133,7 @@ private struct HUDView: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 40)
-            .glassEffect(.regular, in: .capsule)
+            .capsuleGlass()
 
             if let notice = model.notice {
                 Text(notice)
@@ -141,7 +141,7 @@ private struct HUDView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
-                    .glassEffect(.regular, in: .capsule)
+                    .capsuleGlass()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -185,5 +185,16 @@ private struct Waveform: View {
         }
         .frame(height: 24)
         .animation(.linear(duration: 0.08), value: levels)
+    }
+}
+
+private extension View {
+    /// Liquid Glass on macOS 26; a translucent material capsule before it.
+    @ViewBuilder func capsuleGlass() -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: .capsule)
+        } else {
+            background(.regularMaterial, in: .capsule)
+        }
     }
 }

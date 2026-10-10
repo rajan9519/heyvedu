@@ -36,10 +36,24 @@ final class TextCleaner {
             }
         }
 
+        /// Engines this Mac's macOS can run; the settings picker lists only these.
+        static var supported: [Engine] { allCases.filter(\.isSupported) }
+
+        var isSupported: Bool {
+            switch self {
+            case .dictationModel: return true
+            case .appleIntelligence:
+                if #available(macOS 26, *) { return true }
+                return false
+            }
+        }
+
         fileprivate func makeBackend() -> any CleanupBackend {
             switch self {
             case .dictationModel: return DictationModelBackend()
-            case .appleIntelligence: return AppleIntelligenceBackend()
+            case .appleIntelligence:
+                if #available(macOS 26, *) { return AppleIntelligenceBackend() }
+                return UnsupportedBackend(reason: "Apple Intelligence requires macOS 26 or later")
             }
         }
     }
@@ -118,7 +132,9 @@ final class TextCleaner {
             defaults.set(true, forKey: Self.defaultMigrationKey)
         }
         isEnabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
-        engine = defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:)) ?? .defaultEngine
+        // An engine saved on a newer macOS falls back to the default here.
+        engine = defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:))
+            .flatMap { $0.isSupported ? $0 : nil } ?? .defaultEngine
         backends = Dictionary(uniqueKeysWithValues: Engine.allCases.map { ($0, $0.makeBackend()) })
         for backend in backends.values {
             backend.onStateChange = { [weak self] in self?.refreshAvailability() }
@@ -231,12 +247,14 @@ final class TextCleaner {
 // MARK: - Apple Intelligence
 
 /// Structured output so the model returns only the rewritten text, never commentary.
+@available(macOS 26, *)
 @Generable
 nonisolated struct CleanedDictation {
     @Guide(description: "The transcript rewritten exactly as the speaker intended it to be written.")
     let text: String
 }
 
+@available(macOS 26, *)
 final class AppleIntelligenceBackend: CleanupBackend {
     enum BackendError: LocalizedError {
         case generation(String)
@@ -331,6 +349,24 @@ final class AppleIntelligenceBackend: CleanupBackend {
             return try? await model.tokenCount(for: text)
         }
         return text.count / 3 + 1
+    }
+}
+
+/// Stands in for an engine this macOS can't run, so every `Engine` still has a backend.
+final class UnsupportedBackend: CleanupBackend {
+    var onStateChange: (() -> Void)?
+    private let reason: String
+
+    init(reason: String) {
+        self.reason = reason
+    }
+
+    func availability() -> TextCleaner.Availability {
+        .unavailable(reason)
+    }
+
+    func clean(_ chunk: String, instructions: String) async throws -> String {
+        chunk
     }
 }
 

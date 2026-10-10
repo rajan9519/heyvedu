@@ -42,7 +42,7 @@ The sampled alternatives searches also surfaced many smaller vendors publishing 
 | No canonical link or JSON-LD in `index.html` | Missing explicit preferred-URL and structured meaning signals | Add a self-canonical; use accurate, applicable structured data |
 | Checked-in Nginx config serves both www and apex; HTTP redirect preserves host | Possible duplicate host versions if production matches | Verify live behavior, then redirect variants to `https://heyvedu.com/` |
 | README contains detailed installation and privacy information | Useful answers are primarily outside the marketing site | Publish maintained setup and privacy pages on the domain |
-| Source build, English only, Apple silicon, macOS 26+ | Many broad-search visitors cannot use it immediately | Show requirements near installation CTAs and in comparisons |
+| Source build, English only, Apple silicon, macOS 14+ | Many broad-search visitors cannot use it immediately | Show requirements near installation CTAs and in comparisons |
 
 Suggested homepage title: **Free Offline Dictation for Mac | HeyVedu**.
 
@@ -50,7 +50,7 @@ Suggested H1: **Free, open-source dictation for Mac**.
 
 Suggested supporting sentence: “Hold a shortcut, speak, and paste polished English text into your app. Speech recognition and default cleanup run on your Mac, offline after setup.”
 
-Suggested meta description: “Free, open-source dictation for Apple-silicon Macs. Speech recognition and default cleanup run locally. English only; macOS 26+. Build from source.”
+Suggested meta description: “Free, open-source dictation for Apple-silicon Macs. Speech recognition and default cleanup run locally. English only; macOS 14+. Build from source.”
 
 Keep “Install from source” as the CTA until a downloadable release exists. Explain that optional online cleanup sends transcript text through the user's configured CLI provider. Avoid universal “nothing ever leaves your Mac” claims.
 
