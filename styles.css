@@ -367,7 +367,7 @@ section { padding: 120px 0; }
 .track { height: 12px; border-radius: 999px; background: color-mix(in srgb, var(--text) 5%, transparent); overflow: hidden; }
 .track i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--faint); transition: width 2.2s cubic-bezier(.2,.8,.2,1); }
 .lane.v .track i { background: linear-gradient(90deg, var(--green-deep), var(--green)); box-shadow: 0 0 20px var(--green-glow); }
-.race.go .lane.t .track i { width: 27%; } .race.go .lane.v .track i { width: 100%; }
+.race.go .lane.t .track i { width: 28%; } .race.go .lane.v .track i { width: 100%; }
 .stat { font-size: clamp(80px, 12vw, 150px); line-height: .9; }
 .stat .it { font-size: .6em; }
 

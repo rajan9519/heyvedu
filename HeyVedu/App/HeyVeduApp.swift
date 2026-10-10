@@ -54,6 +54,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        if CommandLine.arguments.contains(PipelineBenchmark.flag) {
+            Task {
+                await PipelineBenchmark.run()
+                exit(0)
+            }
+            return
+        }
         #endif
         let firstRun = !Onboarding.isCompleted
         controller.start(requestPermissions: !firstRun, downloadModels: !firstRun)
