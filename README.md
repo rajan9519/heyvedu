@@ -165,7 +165,7 @@ shortcut once more to finish, or press **Escape** to cancel. You can type while
 it listens; only Escape cancels.
 
 A hands-free recording also finishes by itself once you've been quiet for 10
-seconds. Change that, or turn it off, with **Stop when you go quiet** in the
+seconds, after a short countdown in the indicator. Change that, or turn it off, with **Stop when you go quiet** in the
 window's Shortcut section. Either way it stops after 10 minutes. Turn off
 **Double-Tap for Hands-Free** in the menu, or in the Shortcut section, to
 disable hands-free dictation.
@@ -244,6 +244,18 @@ Choose **System Default** or a specific input device from the **Microphone**
 menu, or in the window's General section. If a selected device is missing, HeyVedu falls back to the system
 default and shows a notice. If a device disappears while recording, it
 processes the audio captured so far.
+
+### Recording indicator and sounds
+
+In the window's General section, **Recording indicator** puts the floating
+indicator at the bottom of the screen (the default), the top, or hanging from
+the camera notch. Notch uses the top of the screen on displays without one.
+Turn on **Play sounds** for a short sound when recording starts, finishes, or
+is cancelled.
+
+During hands-free dictation the indicator shows how long you've been recording,
+and counts down for the last three seconds before stopping on silence. Speak to
+keep going.
 
 ## Privacy
 

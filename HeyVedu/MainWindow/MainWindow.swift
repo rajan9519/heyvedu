@@ -196,8 +196,10 @@ private struct GeneralSettings: View {
     let controller: DictationController
 
     var body: some View {
+        @Bindable var controller = controller
         @Bindable var cleaner = controller.cleaner
         @Bindable var devices = controller.devices
+        @Bindable var sounds = controller.sounds
 
         Form {
             Section {
@@ -223,6 +225,21 @@ private struct GeneralSettings: View {
                     ForEach(devices.inputDevices) { device in
                         Text(device.name).tag(Optional(device.uid))
                     }
+                }
+            }
+
+            Section {
+                Picker(selection: $controller.hudPosition) {
+                    ForEach(HUDPosition.allCases) { position in
+                        Text(position.title).tag(position)
+                    }
+                } label: {
+                    Text("Recording indicator")
+                    Text("Notch uses the top of the screen on displays without one.")
+                }
+                Toggle(isOn: $sounds.isEnabled) {
+                    Text("Play sounds")
+                    Text("A short sound when recording starts, finishes or is cancelled.")
                 }
             }
         }

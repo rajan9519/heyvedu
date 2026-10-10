@@ -18,6 +18,14 @@ final class DictationController {
     let cleaner = TextCleaner()
     let dictionary = PersonalDictionary()
     let voiceActivity = VoiceActivity()
+    let sounds = SoundCues()
+
+    var hudPosition: HUDPosition = .saved {
+        didSet {
+            hudPosition.save()
+            hud.position = hudPosition
+        }
+    }
 
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
@@ -68,6 +76,8 @@ final class DictationController {
     @ObservationIgnored private var audioLive = false
     /// The current press passed the hold threshold (the HUD is visible).
     @ObservationIgnored private var pressActivated = false
+    /// The hands-free HUD is counting down to the silence auto-stop.
+    @ObservationIgnored private var stoppingSoonShown = false
     /// The user was told once that dictations paste raw text while the cleanup model
     /// downloads; later dictations during the same download stay quiet.
     @ObservationIgnored private var downloadNoticeShown = false
@@ -231,13 +241,17 @@ final class DictationController {
         case .activated:
             pressActivated = true
             if status == .recording {
+                sounds.play(.start)
                 hud.showRecording(notice: pressNotice, listening: audioLive)
             } else if let pressFailure {
                 hud.flash(pressFailure)
             }
         case .locked:
+            // A double-tap never passes the hold threshold, so this is the first cue.
+            let alreadyActive = pressActivated
             pressActivated = true
             if status == .recording {
+                if !alreadyActive { sounds.play(.start) }
                 isHandsFree = true
                 hud.showRecording(notice: pressNotice ?? handsFreeHint, listening: audioLive, handsFree: true)
                 handsFreeLimitTask = Task { [weak self] in
@@ -268,6 +282,7 @@ final class DictationController {
         handsFreeLimitTask = nil
         if isHandsFree { hotkeyMonitor.reset() }
         isHandsFree = false
+        stoppingSoonShown = false
     }
 
     /// Returns immediately; the engine starts on the recorder's background queue so the
@@ -340,6 +355,7 @@ final class DictationController {
         DebugTrace.write("controller: cancel")
         endHandsFree()
         if status == .recording {
+            if pressActivated { sounds.play(.cancel) }
             status = .idle
             cleaner.discardPrepared()
             Task { await recorder.cancel() }
@@ -348,13 +364,24 @@ final class DictationController {
         hud.hide()
     }
 
-    /// Finishes a hands-free recording once the user has been quiet long enough.
+    /// Finishes a hands-free recording once the user has been quiet long enough, after a
+    /// short countdown in the HUD that speaking again cancels.
     private func silenceUpdated(_ silence: TimeInterval) {
-        guard isHandsFree, status == .recording, handsFreeSilenceStop > 0,
-              silence >= TimeInterval(handsFreeSilenceStop) else { return }
-        DebugTrace.write("controller: hands-free stopped after \(Int(silence))s of silence")
-        finishRecording()
+        guard isHandsFree, status == .recording, handsFreeSilenceStop > 0 else { return }
+        let remaining = TimeInterval(handsFreeSilenceStop) - silence
+        if remaining <= 0 {
+            DebugTrace.write("controller: hands-free stopped after \(Int(silence))s of silence")
+            finishRecording()
+        } else if remaining <= Self.stoppingSoonWarning {
+            stoppingSoonShown = true
+            hud.setNotice("Finishing in \(Int(remaining.rounded(.up)))s — keep talking to continue")
+        } else if stoppingSoonShown {
+            stoppingSoonShown = false
+            hud.setNotice(pressNotice ?? handsFreeHint)
+        }
     }
+
+    private static let stoppingSoonWarning: TimeInterval = 3
 
     /// Drops leading and trailing silence, so the model doesn't invent words for it.
     /// Returns the recording unchanged when VAD isn't available or heard no speech.
@@ -369,6 +396,7 @@ final class DictationController {
 
     private func finishRecording() {
         guard status == .recording else { return }
+        if pressActivated { sounds.play(.stop) }
         endHandsFree()
         status = .processing
         let target = PasteTarget.current()
