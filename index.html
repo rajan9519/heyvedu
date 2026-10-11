@@ -19,8 +19,24 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Lato:wght@400;700;900&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=20261010-claude">
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once unregister identify alias set_config reset opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_distinct_id get_property".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) posthog.init('phc_mFoT4wtbg9XKKtHVTGvngb6vWNtAmM5xMPgu4KWY3LRJ', {
+      api_host: 'https://us.i.posthog.com',
+      persistence: 'localStorage',
+      autocapture: false,
+      capture_pageview: true,
+      capture_pageleave: true,
+      disable_session_recording: true,
+      disable_surveys: true,
+      enable_heatmaps: false,
+      capture_dead_clicks: false,
+      capture_exceptions: false,
+      advanced_disable_feature_flags: true
+    });
+  </script>
   <script>document.documentElement.classList.add('js')</script>
-  <script src="script.js?v=20261010-claude" defer></script>
+  <script src="script.js?v=20261011-analytics" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>

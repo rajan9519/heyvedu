@@ -219,3 +219,16 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 new IntersectionObserver(([e], o) => { if (e.isIntersecting) { $('#race').classList.add('go'); o.disconnect(); } }, { threshold: .5 }).observe($('#race'));
 
 $('#copy').onclick = () => { navigator.clipboard?.writeText('brew install --cask rajan9519/tap/heyvedu'); $('#copy').textContent = 'Copied'; setTimeout(() => $('#copy').textContent = 'Copy', 1500); };
+
+// ---------- Analytics: download and GitHub clicks ----------
+const track = (event, props) => window.posthog?.capture?.(event, props, { transport: 'sendBeacon' });
+const linkLocation = (el) => el.closest('header') ? 'header' : el.closest('footer') ? 'footer' : el.closest('.hero') ? 'hero' : el.closest('.final') ? 'final_cta' : el.closest('section[id]')?.id || 'page';
+document.addEventListener('click', (event) => {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const { hostname, pathname, hash } = new URL(link.href, location.href);
+  const props = { location: linkLocation(link), label: link.textContent.trim().slice(0, 60), href: link.href };
+  if (hostname === 'app.heyvedu.com' && pathname.startsWith('/download')) track('download_clicked', { ...props, method: 'dmg' });
+  else if (hostname === 'github.com' && pathname.startsWith('/rajan9519/heyvedu')) track('github_clicked', { ...props, target: hash.slice(1) || pathname.split('/').slice(3).pop() || 'repo' });
+});
+$('#copy')?.addEventListener('click', () => track('download_clicked', { location: 'install', label: 'Copy Homebrew command', method: 'homebrew' }));
