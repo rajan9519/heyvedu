@@ -86,7 +86,7 @@ final class RecordingHUD {
     private var generation = 0
 
     private static let capsuleSize = NSSize(width: 320, height: 72)
-    private static let edgeMargin: CGFloat = 56
+    private static let edgeMargin: CGFloat = 8
     private static let topMargin: CGFloat = 8
     /// Room below the notch for the content row and a notice.
     private static let notchContentHeight: CGFloat = 64
