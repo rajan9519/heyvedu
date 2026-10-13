@@ -92,7 +92,7 @@ private struct SettingsTabButton: View {
             .frame(minWidth: 64)
             .padding(.horizontal, 6)
             .padding(.vertical, 6)
-            .foregroundStyle(selected ? Color.accentColor : .secondary)
+            .foregroundStyle(selected ? Color.brandText : .secondary)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
