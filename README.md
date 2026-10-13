@@ -252,6 +252,20 @@ words ignored. Pick phrases you wouldn't say otherwise.
 Snippets are saved in `~/Library/Application Support/HeyVedu/Snippets.json` and
 only hold what you type into them.
 
+### History
+
+History is off by default. Turn on **Keep dictation history** in the window's
+**History** section to keep a list of your dictations, newest first, with the
+date and time of each. Copy or delete any of them, or clear them all. Turning
+history off deletes everything saved.
+
+History is saved only on this Mac, in
+`~/Library/Application Support/HeyVedu/History.json` (readable by your user
+only), and keeps the latest 1,000 dictations. Besides the pasted text, each
+entry keeps the raw transcript and the cleanup model's output, so a dictation
+can be included if you choose to send feedback or report an issue. Nothing is
+sent anywhere automatically.
+
 ### Microphone
 
 Choose **System Default** or a specific input device from the **Microphone**
@@ -284,7 +298,7 @@ Microphone → in-memory audio → on-device Parakeet → on-device Vedu Scribe 
 | Recorded audio | Memory only; stays on-device | Memory only; stays on-device |
 | Speech recognition | On-device | On-device |
 | Transcript cleanup | On-device | On-device |
-| Dictation history | Not stored; the last result stays in memory for 5 minutes | Not stored; the last result stays in memory for 5 minutes |
+| Dictation history | Off by default: the last result stays in memory for 5 minutes. Opt in to keep it on disk | Off by default: the last result stays in memory for 5 minutes. Opt in to keep it on disk |
 | Personal dictionary and snippets | What you type only, on disk | What you type only, on disk |
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing

@@ -75,6 +75,9 @@ final class TextCleaner {
         /// The raw transcript was used because the engine's model is still downloading
         /// (or loading right after its download).
         var awaitingDownload = false
+        /// What the model returned for each chunk, joined, before any guard or polish.
+        /// Nil when no model ran. Kept for opt-in history only, never logged.
+        var modelOutput: String?
     }
 
     /// User toggle; persisted.
@@ -215,10 +218,12 @@ final class TextCleaner {
         let chunks = await backend.chunks(of: transcript, instructions: instructions)
 
         var outputs: [String] = []
+        var modelOutputs: [String] = []
         var fallbackReason: String?
         for chunk in chunks {
             do {
                 let cleaned = try await backend.clean(chunk, instructions: instructions)
+                modelOutputs.append(cleaned)
                 if protected.contains(where: { $0.missingTerm(from: chunk, in: cleaned) != nil }) {
                     // The reason is logged, so it doesn't name the word.
                     outputs.append(backend.isNormalizer ? TextPolish.finalize(chunk) : chunk)
@@ -241,7 +246,11 @@ final class TextCleaner {
         }
         let joined = outputs.filter { !$0.isEmpty }.joined(separator: " ")
         // Normalizers own casing and punctuation (the fine-tune emits lists, for one).
-        return Result(text: backend.isNormalizer ? joined : TextPolish.finalize(joined), fallbackReason: fallbackReason)
+        return Result(
+            text: backend.isNormalizer ? joined : TextPolish.finalize(joined),
+            fallbackReason: fallbackReason,
+            modelOutput: modelOutputs.isEmpty ? nil : modelOutputs.joined(separator: " ")
+        )
     }
 }
 

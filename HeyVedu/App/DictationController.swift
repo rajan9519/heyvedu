@@ -18,6 +18,7 @@ final class DictationController {
     let cleaner = TextCleaner()
     let dictionary = PersonalDictionary()
     let snippets = SnippetLibrary()
+    let history = DictationHistory()
     let voiceActivity = VoiceActivity()
     let sounds = SoundCues()
 
@@ -437,10 +438,12 @@ final class DictationController {
                 var output = trimmed
                 var fallbackReason: String?
                 var awaitingDownload = false
+                var cleanup: TextCleaner.Result?
                 if cleaner.isEnabled {
                     hud.showProcessing("Cleaning…")
                     let started = ContinuousClock.now
                     let result = await cleaner.clean(trimmed, protected: [dictionary.matcher, snippets.expander.matcher])
+                    cleanup = result
                     output = result.text
                     fallbackReason = result.fallbackReason
                     awaitingDownload = result.awaitingDownload
@@ -457,6 +460,16 @@ final class DictationController {
                     return
                 }
                 remember(output)
+                history.record(.init(
+                    date: .now,
+                    duration: recording.duration,
+                    transcript: trimmed,
+                    modelOutput: cleanup?.modelOutput,
+                    cleanedText: cleanup?.text,
+                    cleanupEngine: cleanup.map { _ in cleaner.engine.rawValue },
+                    fallbackReason: fallbackReason,
+                    finalText: output
+                ))
                 let outcome = await inserter.insert(output, into: target)
                 completedDictations += 1
                 if let message = Self.copiedMessage(for: outcome) {
@@ -524,5 +537,10 @@ final class DictationController {
     func copyLastResult() {
         guard let lastResult else { return }
         inserter.copy(lastResult)
+    }
+
+    /// Puts `text` on the clipboard, e.g. a dictation from history.
+    func copy(_ text: String) {
+        inserter.copy(text)
     }
 }
