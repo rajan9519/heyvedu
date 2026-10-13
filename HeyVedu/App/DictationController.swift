@@ -19,6 +19,7 @@ final class DictationController {
     let dictionary = PersonalDictionary()
     let snippets = SnippetLibrary()
     let history = DictationHistory()
+    let stats = DictationStats()
     let voiceActivity = VoiceActivity()
     let sounds = SoundCues()
 
@@ -152,6 +153,7 @@ final class DictationController {
     ///     onboarding window offers them; models already on disk load either way.
     func start(requestPermissions: Bool = true, downloadModels: Bool = true) {
         devices.start()
+        stats.importOnce(history.entries)
 
         hotkeyMonitor.hotkey = hotkey
         hotkeyMonitor.handsFreeEnabled = handsFreeEnabled
@@ -470,6 +472,7 @@ final class DictationController {
                     fallbackReason: fallbackReason,
                     finalText: output
                 ))
+                stats.record(output, duration: recording.duration)
                 let outcome = await inserter.insert(output, into: target)
                 completedDictations += 1
                 if let message = Self.copiedMessage(for: outcome) {
