@@ -10,6 +10,7 @@ struct HistoryView: View {
 
     @State private var query = ""
     @State private var confirmingClear = false
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         Group {
@@ -46,6 +47,7 @@ struct HistoryView: View {
         return MainPage {
             TextField("Search", text: $query, prompt: Text("Search dictations"))
                 .textFieldStyle(.roundedBorder)
+                .focused($searchFocused)
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -79,6 +81,7 @@ struct HistoryView: View {
             }
             .font(.callout)
         }
+        .onAppear { searchFocused = true }
     }
 
     private var filtered: [DictationHistory.Entry] {
