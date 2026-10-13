@@ -95,7 +95,7 @@ private struct OnboardingView: View {
             HStack(spacing: 6) {
                 ForEach(Step.allCases, id: \.self) { item in
                     Circle()
-                        .fill(item == step ? Color.accentColor : Color.secondary.opacity(0.3))
+                        .fill(item == step ? Color.brand : Color.secondary.opacity(0.3))
                         .frame(width: 7, height: 7)
                 }
             }
@@ -105,6 +105,8 @@ private struct OnboardingView: View {
             }
             primaryButton
                 .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .tint(.brand)
         }
         .padding(20)
     }
@@ -202,7 +204,7 @@ struct PermissionRow: View {
             Image(systemName: icon)
                 .font(.title2)
                 .frame(width: 32)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.brandText)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
                 Text(detail)
@@ -312,7 +314,7 @@ struct ModelRow: View {
             Image(systemName: icon)
                 .font(.title2)
                 .frame(width: 32)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.brandText)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
                 Text(detail)
@@ -530,7 +532,7 @@ struct Keycap: View {
         .foregroundStyle(pressed ? Color.white : Color.primary)
         .background(
             RoundedRectangle(cornerRadius: 7)
-                .fill(pressed ? Color.accentColor : Color(nsColor: .controlBackgroundColor))
+                .fill(pressed ? Color.brand : Color(nsColor: .controlBackgroundColor))
                 .shadow(color: .black.opacity(pressed ? 0 : 0.25), radius: 0, y: pressed ? 0 : 2)
         )
         .overlay(RoundedRectangle(cornerRadius: 7).stroke(.separator))

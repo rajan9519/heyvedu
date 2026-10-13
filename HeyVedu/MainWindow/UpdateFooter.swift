@@ -115,7 +115,7 @@ private struct ReadyCard: View {
             HStack(spacing: 10) {
                 Image(systemName: "arrow.down.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(Color.brandText)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Update ready")
                         .font(.callout.weight(.semibold))
@@ -130,6 +130,7 @@ private struct ReadyCard: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .tint(.brand)
             .controlSize(.regular)
             Text("Or it installs the next time you quit.")
                 .font(.caption2)
@@ -137,14 +138,7 @@ private struct ReadyCard: View {
                 .frame(maxWidth: .infinity)
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.accentColor.opacity(0.12))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.accentColor.opacity(0.25))
-        )
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 }

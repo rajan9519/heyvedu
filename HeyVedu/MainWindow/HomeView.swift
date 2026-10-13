@@ -520,7 +520,8 @@ private struct RecentDictations: View {
                 Spacer()
                 if history.isEnabled, !history.entries.isEmpty {
                     Button("See All", action: showAll)
-                        .buttonStyle(.link)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.brandText)
                 }
             }
             .padding(.bottom, 8)

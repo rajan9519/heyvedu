@@ -108,17 +108,22 @@ private struct MainView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: pageSelection) {
-                ForEach(MainSection.pages, id: \.self) { page in
-                    Label(page.title, systemImage: page.icon)
+            VStack(spacing: 0) {
+                VStack(spacing: 2) {
+                    ForEach(MainSection.pages, id: \.self) { page in
+                        SidebarRow(section: page, selected: navigation.section == page) {
+                            navigation.section = page
+                        }
+                    }
                 }
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+                .padding(.horizontal, 10)
+                .padding(.top, 10)
+                Spacer(minLength: 0)
                 VStack(spacing: 8) {
                     UpdateFooter(updates: updates)
                     Divider()
                         .padding(.horizontal, 10)
-                    SettingsRow(selected: navigation.section == .settings) {
+                    SidebarRow(section: .settings, selected: navigation.section == .settings, shortcut: "⌘,") {
                         navigation.section = .settings
                     }
                     .padding(.horizontal, 10)
@@ -136,15 +141,6 @@ private struct MainView: View {
                 .keyboardShortcut(",")
                 .opacity(0)
                 .accessibilityHidden(true)
-        }
-    }
-
-    /// The sidebar list highlights nothing while Settings is open.
-    private var pageSelection: Binding<MainSection?> {
-        Binding {
-            navigation.section == .settings ? nil : navigation.section
-        } set: { page in
-            if let page { navigation.section = page }
         }
     }
 
@@ -170,9 +166,12 @@ private struct MainView: View {
     }
 }
 
-/// The Settings entry at the bottom of the sidebar, styled like a sidebar row.
-private struct SettingsRow: View {
+/// A page or Settings in the sidebar. The selected row takes a green tint rather than the
+/// system accent, so the sidebar matches HeyVedu's own color.
+private struct SidebarRow: View {
+    let section: MainSection
     let selected: Bool
+    var shortcut: String? = nil
     let action: () -> Void
 
     @State private var hovering = false
@@ -180,25 +179,29 @@ private struct SettingsRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: MainSection.settings.icon)
+                Image(systemName: section.icon)
                     .frame(width: 18)
-                    .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
-                Text(MainSection.settings.title)
-                    .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                    .foregroundStyle(selected ? AnyShapeStyle(Color.brandText) : AnyShapeStyle(.secondary))
+                Text(section.title)
+                    .fontWeight(selected ? .medium : .regular)
+                    .foregroundStyle(selected ? AnyShapeStyle(Color.brandText) : AnyShapeStyle(.primary))
                 Spacer(minLength: 0)
-                Text("⌘,")
-                    .font(.caption)
-                    .foregroundStyle(selected ? AnyShapeStyle(.white.opacity(0.7)) : AnyShapeStyle(.tertiary))
+                if let shortcut {
+                    Text(shortcut)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.primary.opacity(hovering ? 0.05 : 0)))
+                    .fill(selected ? AnyShapeStyle(Color.brand.opacity(0.18)) : AnyShapeStyle(.primary.opacity(hovering ? 0.05 : 0)))
             )
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
