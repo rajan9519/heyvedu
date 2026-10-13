@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HeyVedu Redesign</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--bg:#ECECEA;--s1:#F6F6F4;--s2:#FFFFFF;--t1:#1D1D1B;--t2:#5F5E5A;--t3:#8C8B85;--bd:rgba(0,0,0,.09);--bd2:rgba(0,0,0,.16);--bd3:rgba(0,0,0,.3);--sel:rgba(0,0,0,.07);--hov:rgba(0,0,0,.04);--acc:#185FA5;--accbg:#E6F1FB;--ok:#0F6E56;--okbg:#E1F5EE;--warn:#854F0B;--warnbg:#FAEEDA;--warnbd:#EF9F27;--h0:rgba(0,0,0,.07)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--s1:#1E1E1C;--s2:#262624;--t1:#F1EFE8;--t2:#B4B2A9;--t3:#888780;--bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.15);--bd3:rgba(255,255,255,.3);--sel:rgba(255,255,255,.1);--hov:rgba(255,255,255,.05);--acc:#85B7EB;--accbg:#0C2A47;--ok:#5DCAA5;--okbg:#0B3328;--warn:#FAC775;--warnbg:#3A2606;--warnbd:#854F0B;--h0:rgba(255,255,255,.07)}}
+:root[data-theme="dark"]{--bg:#141413;--s1:#1E1E1C;--s2:#262624;--t1:#F1EFE8;--t2:#B4B2A9;--t3:#888780;--bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.15);--bd3:rgba(255,255,255,.3);--sel:rgba(255,255,255,.1);--hov:rgba(255,255,255,.05);--acc:#85B7EB;--accbg:#0C2A47;--ok:#5DCAA5;--okbg:#0B3328;--warn:#FAC775;--warnbg:#3A2606;--warnbd:#854F0B;--h0:rgba(255,255,255,.07)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t1);font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;padding:24px 16px 48px}
+.wrap{max-width:900px;margin:0 auto}
+h1{font-size:18px;font-weight:600;margin:0 0 4px}.sub{color:var(--t2);margin:0 0 16px}
+.win{position:relative;border:.5px solid var(--bd2);border-radius:12px;overflow:hidden;background:var(--s2);box-shadow:0 20px 50px rgba(0,0,0,.15)}
+.tb{height:30px;display:flex;align-items:center;gap:7px;padding:0 12px;border-bottom:.5px solid var(--bd);background:var(--s1)}
+.dot{width:11px;height:11px;border-radius:50%}.r{background:#FF5F57}.y{background:#FEBC2E}.g{background:#28C840}
+.body{display:grid;grid-template-columns:180px minmax(0,1fr);min-height:540px}
+.side{background:var(--s1);border-right:.5px solid var(--bd);display:flex;flex-direction:column;padding:12px 8px}
+.nav{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;color:var(--t2);cursor:pointer;margin-bottom:2px}
+.nav:hover{background:var(--hov)}.nav.on{background:var(--sel);color:var(--t1)}.nav i{font-size:17px}
+.logo{width:22px;height:22px;border-radius:6px;background:#1D9E75;display:flex;align-items:center;justify-content:center;color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.tile{background:var(--s1);border-radius:10px;padding:12px 14px}
+.tile .l{color:var(--t2);font-size:12px;display:flex;align-items:center;gap:6px}.tile .v{font-size:22px;font-weight:600;margin-top:4px}.tile .d{font-size:11px;color:var(--t3);margin-top:2px}
+.card{border:.5px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.hm{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:3px;overflow:hidden}
+.hm div,.sw{width:11px;height:11px;border-radius:2px}
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:.5px solid var(--bd)}
+.ell{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.pg{display:none;padding:22px 24px}.pg.on{display:block}
+.sg{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:.5px solid var(--bd);gap:12px}
+.tg{width:32px;height:19px;border-radius:10px;background:#1D9E75;position:relative;flex:none;cursor:pointer}
+.tg::after{content:"";position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.tg.off{background:var(--bd3)}.tg.off::after{left:2px;right:auto}
+.kc{display:inline-block;border:.5px solid var(--bd2);border-bottom-width:2px;border-radius:5px;padding:1px 7px;font-size:12px;background:var(--s2)}
+.st{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 12px;border-radius:8px;color:var(--t2);cursor:pointer;font-size:11px}
+.st i{font-size:20px}.st.on{background:var(--sel);color:var(--acc)}
+.sp>.sg:first-child{border-top:0}.sp{display:none}.sp.on{display:block}
+.hint{font-size:11px;color:var(--t3)}
+button{font:inherit;font-size:12px;color:var(--t1);background:var(--s2);border:.5px solid var(--bd2);border-radius:6px;padding:4px 10px;cursor:pointer}
+button:hover{background:var(--hov)}
+input{font:inherit;color:var(--t1);background:var(--s1);border:.5px solid var(--bd2);border-radius:6px;padding:5px 9px;width:200px}
+.pill{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px}
+.chip{padding:5px 10px;border-radius:999px;background:var(--s1)}
+.label{font-size:13px;color:var(--t2);margin:28px 0 10px}
+@media (max-width:700px){.body{grid-template-columns:1fr}.side{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:.5px solid var(--bd)}.side .grow,.side .upd,.side .brand{display:none}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head><body><div class="wrap">
+<div id="intro"><h1>HeyVedu: redesigned main window</h1>
+<p class="sub">Clickable mockup. Use the sidebar to switch pages (Settings included) and the buttons below to preview a Mac that still needs setup.</p>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;color:var(--t2)">Preview state: <button id="bReady">Ready</button><button id="bSetup">Needs setup</button></div></div>
+
+<div class="win">
+ <div class="tb"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+ <div class="body">
+  <div class="side">
+   <div class="brand" style="display:flex;align-items:center;gap:8px;padding:4px 10px 14px"><div class="logo"><i class="ti ti-wave-sine" style="font-size:14px"></i></div><b>HeyVedu</b></div>
+   <div class="nav on" data-p="home"><i class="ti ti-home"></i>Home</div>
+   <div class="nav" data-p="history"><i class="ti ti-history"></i>History</div>
+   <div class="nav" data-p="dict"><i class="ti ti-book-2"></i>Dictionary</div>
+   <div class="nav" data-p="snip"><i class="ti ti-bolt"></i>Snippets</div>
+   <div class="grow" style="flex:1"></div>
+   <div class="upd" style="margin:0 4px 8px;padding:8px 10px;border-radius:8px;background:var(--accbg);color:var(--acc);font-size:12px;display:flex;align-items:center;gap:6px"><i class="ti ti-download" style="font-size:16px"></i><span style="flex:1;line-height:1.3"><b>Update ready</b><br><span style="text-decoration:underline">Relaunch to install</span></span></div>
+   <div style="border-top:.5px solid var(--bd);margin:0 4px 6px"></div><div class="nav" data-p="settings" id="goSet"><i class="ti ti-settings"></i><span style="flex:1;color:var(--t1)">Settings</span><span class="hint">⌘,</span></div>
+  </div>
+  <div>
+   <div class="pg on" id="p-home">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px">
+     <div><div style="font-size:21px;font-weight:600">Good evening</div><div style="color:var(--t2);margin-top:3px">Hold <span class="kc">fn</span> anywhere and speak</div></div>
+     <div class="pill" id="pill" style="background:var(--okbg);color:var(--ok)"><span style="width:7px;height:7px;border-radius:50%;background:currentColor"></span><span id="pillT">Ready · on-device</span></div>
+    </div>
+    <div id="setup" style="display:none;border:.5px solid var(--warnbd);background:var(--warnbg);border-radius:10px;padding:12px 14px;margin-bottom:16px;color:var(--warn)">
+     <div style="font-weight:600;margin-bottom:6px">Two things before you can dictate</div>
+     <div style="display:flex;align-items:center;gap:8px;padding:4px 0"><i class="ti ti-circle-check"></i><span style="flex:1">Microphone access</span><span>Allowed</span></div>
+     <div style="display:flex;align-items:center;gap:8px;padding:4px 0"><i class="ti ti-circle"></i><span style="flex:1">Accessibility access</span><button>Allow</button></div>
+     <div style="display:flex;align-items:center;gap:8px;padding:4px 0"><i class="ti ti-circle"></i><span style="flex:1">Speech model · 600 MB</span><button>Download</button></div>
+    </div>
+    <div class="tiles">
+     <div class="tile"><div class="l"><i class="ti ti-letter-case"></i>Words</div><div class="v">48,210</div><div class="d">3,104 this week</div></div>
+     <div class="tile"><div class="l"><i class="ti ti-clock"></i>Time saved</div><div class="v">14.2 h</div><div class="d">vs typing at 45 wpm</div></div>
+     <div class="tile"><div class="l"><i class="ti ti-gauge"></i>Pace</div><div class="v">142 wpm</div><div class="d">3.1× typing speed</div></div>
+     <div class="tile"><div class="l"><i class="ti ti-flame"></i>Streak</div><div class="v">12 days</div><div class="d">Best 21 days</div></div>
+    </div>
+    <div class="card">
+     <div style="display:flex;justify-content:space-between;margin-bottom:10px"><b>Activity</b><span class="hint">Last 6 months · 312 dictations</span></div>
+     <div class="hm" id="hm"></div>
+     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;flex-wrap:wrap"><span class="hint"><i class="ti ti-lock"></i> Counts only, never your words</span><span class="hint" style="display:flex;gap:4px;align-items:center">Less <span class="sw" style="background:var(--h0)"></span><span class="sw" style="background:#9FE1CB"></span><span class="sw" style="background:#5DCAA5"></span><span class="sw" style="background:#1D9E75"></span><span class="sw" style="background:#0F6E56"></span> More</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><b>Recent</b><span style="color:var(--acc);font-size:12px;cursor:pointer" data-go="history">See all</span></div>
+    <div class="row"><span class="ell">Can we push the design review to Thursday? I want to finish the onboarding flow first.</span><span class="hint">2m</span></div>
+    <div class="row"><span class="ell">Thanks for the quick turnaround, the new build fixes the crash on launch.</span><span class="hint">1h</span></div>
+   </div>
+   <div class="pg" id="p-settings" style="padding:0">
+    <div style="display:flex;justify-content:center;gap:4px;padding:10px;border-bottom:.5px solid var(--bd)">
+  <div class="st on" data-s="gen"><i class="ti ti-adjustments"></i>General</div>
+  <div class="st" data-s="key"><i class="ti ti-keyboard"></i>Shortcut</div>
+  <div class="st" data-s="mod"><i class="ti ti-cpu"></i>Models</div>
+  <div class="st" data-s="priv"><i class="ti ti-shield-lock"></i>Privacy</div>
+  <div class="st" data-s="about"><i class="ti ti-info-circle"></i>About</div>
+ </div>
+    <div style="padding:8px 28px 20px;max-width:620px;margin:0 auto">
+  <div class="sp on" id="s-gen">
+   <div class="sg"><div>Clean up transcripts<div class="hint">Remove filler words, fix punctuation</div></div><div class="tg"></div></div>
+   <div class="sg"><span>Cleanup engine</span><span style="color:var(--t2)">Vedu Scribe <i class="ti ti-selector"></i></span></div>
+   <div class="sg"><span>Microphone</span><span style="color:var(--t2)">System default <i class="ti ti-selector"></i></span></div>
+   <div class="sg"><span>Recording indicator</span><span style="color:var(--t2)">Notch <i class="ti ti-selector"></i></span></div>
+   <div class="sg"><span>Play sounds</span><div class="tg"></div></div>
+  </div>
+  <div class="sp" id="s-key">
+   <div class="sg"><span>Dictation shortcut</span><span><span class="kc">fn</span> <button style="margin-left:6px">Change</button></span></div>
+   <div class="sg"><div>Double-tap for hands-free<div class="hint">Keep recording without holding</div></div><div class="tg"></div></div>
+   <div class="sg"><span>Stop when you go quiet</span><span style="color:var(--t2)">After 10 seconds <i class="ti ti-selector"></i></span></div>
+  </div>
+  <div class="sp" id="s-mod">
+   <div class="sg"><div>Speech model<div class="hint">Parakeet TDT v3 · required</div></div><span style="color:var(--ok)"><i class="ti ti-circle-check"></i> Ready</span></div>
+   <div class="sg"><div>Cleanup model<div class="hint">Vedu Scribe · optional</div></div><span style="color:var(--ok)"><i class="ti ti-circle-check"></i> Ready</span></div>
+   <div class="hint" style="margin-top:10px">Models run on this Mac and work offline once downloaded.</div>
+  </div>
+  <div class="sp" id="s-priv">
+   <div class="sg"><span>Microphone access</span><span style="color:var(--ok)"><i class="ti ti-circle-check"></i> Allowed</span></div>
+   <div class="sg"><span>Accessibility access</span><span style="color:var(--ok)"><i class="ti ti-circle-check"></i> Allowed</span></div>
+   <div class="sg"><div>Keep dictation history<div class="hint">Saved on this Mac only. Turning it off deletes it.</div></div><div class="tg off"></div></div>
+   <div class="sg"><div>Activity stats<div class="hint">Daily word and time counts. Never the text.</div></div><button>Reset</button></div>
+  </div>
+  <div class="sp" id="s-about">
+   <div style="display:flex;align-items:center;gap:12px;padding:12px 0"><div class="logo" style="width:40px;height:40px;border-radius:10px"><i class="ti ti-wave-sine" style="font-size:22px"></i></div><div><b>HeyVedu 1.4.0</b><div class="hint">You're up to date</div></div></div>
+   <div class="sg"><span>Check for updates</span><button>Check now</button></div>
+   <div class="sg"><span>Welcome guide</span><button>Show</button></div>
+  </div>
+ </div>
+   </div>
+   <div class="pg" id="p-history">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:18px;font-weight:600">History</span><input placeholder="Search dictations"></div>
+    <div class="hint" style="margin:8px 0 2px">Today</div>
+    <div class="row"><span style="flex:1">Can we push the design review to Thursday? I want to finish the onboarding flow first.</span><i class="ti ti-copy" style="color:var(--t3)"></i></div>
+    <div class="row"><span style="flex:1">Thanks for the quick turnaround, the new build fixes the crash on launch.</span><i class="ti ti-copy" style="color:var(--t3)"></i></div>
+    <div class="hint" style="margin:14px 0 2px">Yesterday</div>
+    <div class="row"><span style="flex:1">Refactor the transcriber so the model loads lazily on first use.</span><i class="ti ti-copy" style="color:var(--t3)"></i></div>
+    <div class="hint" style="margin-top:14px">History is opt-in. Turn it on or off in Settings › Privacy.</div>
+   </div>
+   <div class="pg" id="p-dict">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:18px;font-weight:600">Dictionary</span><button><i class="ti ti-plus"></i> Add word</button></div>
+    <div style="color:var(--t2);margin-bottom:12px">Names and terms HeyVedu should always spell your way.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">HeyVedu</span><span class="chip">SwiftUI</span><span class="chip">Parakeet</span><span class="chip">kubectl <span style="color:var(--t3)">← cube control</span></span></div>
+   </div>
+   <div class="pg" id="p-snip">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:18px;font-weight:600">Snippets</span><button><i class="ti ti-plus"></i> New snippet</button></div>
+    <div style="color:var(--t2);margin-bottom:8px">Say a trigger phrase, get the full text.</div>
+    <div class="row"><b style="width:120px">my email</b><span style="flex:1;color:var(--t2)">rajan@example.com</span></div>
+    <div class="row"><b style="width:120px">sign off</b><span style="flex:1;color:var(--t2)">Best, Rajan</span></div>
+   </div>
+  </div>
+ </div>
+</div>
+
+</div>
+<script>
+const hm=document.getElementById('hm'),cs=['var(--h0)','#9FE1CB','#5DCAA5','#1D9E75','#0F6E56'];let s=7;const r=()=>{s=(s*9301+49297)%233280;return s/233280};
+for(let i=0;i<26*7;i++){const x=r(),w=i/182,l=x<0.35-w*0.2?0:Math.min(4,Math.floor(x*4*(0.6+w))+1),d=document.createElement('div');d.style.background=cs[l];hm.appendChild(d)}
+const go=p=>{document.querySelectorAll('.side .nav[data-p]').forEach(n=>n.classList.toggle('on',n.dataset.p===p));document.querySelectorAll('.pg').forEach(g=>g.classList.toggle('on',g.id==='p-'+p))};
+document.querySelectorAll('[data-p],[data-go]').forEach(n=>n.onclick=()=>go(n.dataset.p||n.dataset.go));
+const names={gen:'General',key:'Shortcut',mod:'Models',priv:'Privacy',about:'About'};
+document.querySelectorAll('.st').forEach(t=>t.onclick=()=>{document.querySelectorAll('.st').forEach(x=>x.classList.toggle('on',x===t));document.querySelectorAll('.sp').forEach(p=>p.classList.toggle('on',p.id==='s-'+t.dataset.s));0});
+document.querySelectorAll('.tg').forEach(t=>t.onclick=()=>t.classList.toggle('off'));
+const pill=document.getElementById('pill'),pt=document.getElementById('pillT'),su=document.getElementById('setup');
+bReady.onclick=()=>{pill.style.background='var(--okbg)';pill.style.color='var(--ok)';pt.textContent='Ready · on-device';su.style.display='none'};
+bSetup.onclick=()=>{go('home');pill.style.background='var(--warnbg)';pill.style.color='var(--warn)';pt.textContent='Setup needed';su.style.display='block'};
+const q=new URLSearchParams(location.hash.slice(1));
+if(q.get('theme'))document.documentElement.dataset.theme=q.get('theme');
+if(q.get('view')==='main'){intro.style.display='none'}
+if(q.get('p'))go(q.get('p'));
+if(q.get('setup'))bSetup.onclick();
+if(q.get('s')){go('settings');}
+if(q.get('s'))document.querySelector('.st[data-s="'+q.get('s')+'"]').onclick();
+</script></body></html>
