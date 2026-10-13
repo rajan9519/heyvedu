@@ -40,28 +40,37 @@ struct HistoryView: View {
         }
     }
 
+    /// The search field sits in the page rather than the toolbar; see `MainPage`.
     private var list: some View {
         let days = Self.groupedByDay(filtered)
-        return List {
-            ForEach(days, id: \.day) { group in
-                Section(Self.title(for: group.day)) {
-                    ForEach(group.entries) { entry in
-                        HistoryRow(
-                            entry: entry,
-                            copy: { copy(entry.finalText) },
-                            delete: { history.delete(entry.id) }
-                        )
+        return MainPage {
+            TextField("Search", text: $query, prompt: Text("Search dictations"))
+                .textFieldStyle(.roundedBorder)
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(days, id: \.day) { group in
+                        Text(Self.title(for: group.day))
+                            .font(.headline)
+                            .padding(.top, group.day == days.first?.day ? 0 : 20)
+                            .padding(.bottom, 8)
+                        ForEach(group.entries) { entry in
+                            HistoryRow(
+                                entry: entry,
+                                copy: { copy(entry.finalText) },
+                                delete: { history.delete(entry.id) }
+                            )
+                        }
                     }
                 }
             }
-        }
-        .overlay {
-            if days.isEmpty {
-                ContentUnavailableView.search(text: query)
+            .frame(maxHeight: .infinity)
+            .overlay {
+                if days.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                }
             }
-        }
-        .searchable(text: $query, placement: .toolbar, prompt: "Search dictations")
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+
             HStack {
                 Text("\(history.entries.count) of up to \(DictationHistory.limit) kept on this Mac")
                     .foregroundStyle(.secondary)
@@ -69,9 +78,6 @@ struct HistoryView: View {
                 Button("Clear History…") { confirmingClear = true }
             }
             .font(.callout)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.bar)
         }
     }
 
@@ -123,7 +129,9 @@ private struct HistoryRow: View {
                 .buttonStyle(.borderless)
                 .help("Copy")
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .overlay(alignment: .top) { Divider() }
         .contextMenu {
             Button("Copy", action: copy)
             Button("Delete", role: .destructive, action: delete)
