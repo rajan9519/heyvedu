@@ -6,11 +6,13 @@ import SwiftUI
 /// in the menu bar.
 final class MainWindowController: NSObject, NSWindowDelegate {
     private let controller: DictationController
+    private let updates: UpdateController
     private let showWelcomeGuide: () -> Void
     private var window: NSWindow?
 
-    init(controller: DictationController, showWelcomeGuide: @escaping () -> Void) {
+    init(controller: DictationController, updates: UpdateController, showWelcomeGuide: @escaping () -> Void) {
         self.controller = controller
+        self.updates = updates
         self.showWelcomeGuide = showWelcomeGuide
     }
 
@@ -29,7 +31,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() -> NSWindow {
-        let view = MainView(controller: controller, showWelcomeGuide: showWelcomeGuide)
+        let view = MainView(controller: controller, updates: updates, showWelcomeGuide: showWelcomeGuide)
         let hosting = NSHostingController(rootView: view)
         hosting.sizingOptions = []
         let window = NSWindow(contentViewController: hosting)
@@ -78,6 +80,7 @@ private enum SidebarItem: String, CaseIterable, Identifiable {
 
 private struct MainView: View {
     let controller: DictationController
+    let updates: UpdateController
     let showWelcomeGuide: () -> Void
 
     @State private var section: SidebarItem = .home
@@ -86,6 +89,9 @@ private struct MainView: View {
         NavigationSplitView {
             List(SidebarItem.allCases, selection: $section) { item in
                 Label(item.title, systemImage: item.icon)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                UpdateFooter(updates: updates)
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
         } detail: {

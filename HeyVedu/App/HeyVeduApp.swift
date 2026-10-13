@@ -8,7 +8,6 @@ struct HeyVeduApp: App {
         MenuBarExtra {
             MenuContent(
                 controller: appDelegate.controller,
-                updates: appDelegate.updates,
                 openMainWindow: { appDelegate.mainWindow.show() }
             )
         } label: {
@@ -41,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         onboarding.onClose = { [unowned self] in mainWindow.show() }
         return onboarding
     }()
-    lazy var mainWindow = MainWindowController(controller: controller) { [unowned self] in
+    lazy var mainWindow = MainWindowController(controller: controller, updates: updates) { [unowned self] in
         onboarding.show()
     }
 

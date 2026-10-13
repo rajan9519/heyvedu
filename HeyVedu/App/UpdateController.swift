@@ -4,8 +4,8 @@ import os
 import Sparkle
 
 /// Checks the appcast once a day (Info.plist `SUScheduledCheckInterval`), downloads new
-/// releases silently, and installs them when the app quits. Once a download is ready the
-/// menu offers "Restart to Update"; quitting normally installs it too.
+/// releases silently, and installs them when the app quits. The main window's sidebar shows
+/// the state and offers "Relaunch" once a download is ready; quitting normally installs it too.
 @Observable
 final class UpdateController: NSObject {
     enum State: Equatable {
@@ -15,14 +15,24 @@ final class UpdateController: NSObject {
         case readyToInstall(version: String)
     }
 
+    /// Outcome of the last check the user asked for, shown next to the button.
+    enum CheckResult: Equatable {
+        case upToDate
+        case failed(String)
+    }
+
     private(set) var state: State = .idle
+    private(set) var lastCheckResult: CheckResult?
     /// False when the updater could not start (Debug builds, or a build without a signing key).
     private(set) var isAvailable = false
+
+    static let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
 
     @ObservationIgnored private var updater: SPUUpdater?
     @ObservationIgnored private var installNow: (() -> Void)?
     /// Results of a check the user asked for are reported; scheduled checks stay silent.
     @ObservationIgnored private var userInitiated = false
+    @ObservationIgnored private var clearResult: Task<Void, Never>?
 
     private let logger = Logger(subsystem: "com.heyvedu.app", category: "Updates")
 
@@ -51,6 +61,7 @@ final class UpdateController: NSObject {
     func checkForUpdates() {
         guard let updater, state == .idle, !updater.sessionInProgress else { return }
         userInitiated = true
+        setResult(nil)
         state = .checking
         updater.checkForUpdatesInBackground()
     }
@@ -59,24 +70,15 @@ final class UpdateController: NSObject {
         installNow?()
     }
 
-    var menuTitle: String {
-        switch state {
-        case .idle: return "Check for Updates…"
-        case .checking: return "Checking for Updates…"
-        case .downloading(let version): return "Downloading HeyVedu \(version)…"
-        case .readyToInstall(let version): return "Restart to Update to HeyVedu \(version)"
-        }
-    }
-
-    /// Shown after the Sparkle callback returns, so the modal alert doesn't stall the updater.
-    private func showAlert(_ message: String, info: String) {
-        Task {
-            let alert = NSAlert()
-            alert.messageText = message
-            alert.informativeText = info
-            // Menu-bar apps aren't active by default; bring the alert to the front.
-            NSApp.activate()
-            alert.runModal()
+    /// "Up to date" fades after a few seconds; an error stays until the next check.
+    private func setResult(_ result: CheckResult?) {
+        clearResult?.cancel()
+        lastCheckResult = result
+        guard result == .upToDate else { return }
+        clearResult = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            guard !Task.isCancelled else { return }
+            self?.lastCheckResult = nil
         }
     }
 }
@@ -84,12 +86,6 @@ final class UpdateController: NSObject {
 extension UpdateController: SPUUpdaterDelegate {
     func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
         state = .downloading(version: item.displayVersionString)
-        if userInitiated {
-            showAlert(
-                "HeyVedu \(item.displayVersionString) is available.",
-                info: "It's downloading in the background. When it's ready, choose Restart to Update from the HeyVedu menu, or it installs the next time you quit HeyVedu."
-            )
-        }
     }
 
     func updater(
@@ -101,7 +97,7 @@ extension UpdateController: SPUUpdaterDelegate {
         installNow = immediateInstallHandler
         state = .readyToInstall(version: item.displayVersionString)
         userInitiated = false
-        // We show "Restart to Update" in the menu; Sparkle still installs on quit.
+        // The sidebar offers "Relaunch"; Sparkle still installs on quit.
         return true
     }
 
@@ -112,15 +108,10 @@ extension UpdateController: SPUUpdaterDelegate {
         state = .idle
         guard let error = error as NSError? else { return }
         if error.domain == SUSparkleErrorDomain && error.code == Int(SUError.noUpdateError.rawValue) {
-            if reported {
-                let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-                showAlert("You're up to date.", info: "HeyVedu \(version) is the latest version.")
-            }
+            if reported { setResult(.upToDate) }
             return
         }
         logger.error("Update check failed: \(error.localizedDescription, privacy: .public)")
-        if reported {
-            showAlert("Couldn't check for updates.", info: error.localizedDescription)
-        }
+        if reported { setResult(.failed(error.localizedDescription)) }
     }
 }
