@@ -112,6 +112,13 @@ extension UpdateController: SPUUpdaterDelegate {
             return
         }
         logger.error("Update check failed: \(error.localizedDescription, privacy: .public)")
-        if reported { setResult(.failed(error.localizedDescription)) }
+        guard reported else { return }
+        // A release whose DMG is not reachable yet (e.g. appcast uploaded first) is not
+        // installable, so the user is as up to date as they can be; the daily check retries.
+        if error.domain == SUSparkleErrorDomain && error.code == Int(SUError.downloadError.rawValue) {
+            setResult(.upToDate)
+        } else {
+            setResult(.failed(error.localizedDescription))
+        }
     }
 }
