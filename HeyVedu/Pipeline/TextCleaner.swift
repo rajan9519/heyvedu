@@ -125,7 +125,7 @@ final class TextCleaner {
     /// Settings of engines that no longer exist.
     private static let retiredKeys = ["claudeModel", "s1MiniStyling", "s1MiniMadeDefault"]
 
-    init() {
+    convenience init() {
         let defaults = UserDefaults.standard
         // One-time switch to Vedu Scribe when it became the default engine.
         if !defaults.bool(forKey: Self.defaultMigrationKey) {
@@ -134,11 +134,21 @@ final class TextCleaner {
             PinnedModel.removeRetiredModels()
             defaults.set(true, forKey: Self.defaultMigrationKey)
         }
-        isEnabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
-        // An engine saved on a newer macOS falls back to the default here.
-        engine = defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:))
-            .flatMap { $0.isSupported ? $0 : nil } ?? .defaultEngine
-        backends = Dictionary(uniqueKeysWithValues: Engine.allCases.map { ($0, $0.makeBackend()) })
+        self.init(
+            isEnabled: defaults.object(forKey: Self.enabledKey) as? Bool ?? true,
+            // An engine saved on a newer macOS falls back to the default here.
+            engine: defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:))
+                .flatMap { $0.isSupported ? $0 : nil } ?? .defaultEngine,
+            backends: Dictionary(uniqueKeysWithValues: Engine.allCases.map { ($0, $0.makeBackend()) })
+        )
+    }
+
+    /// Uses the given backends and settings without reading or writing user defaults.
+    /// `backends` must have one for every engine that can be selected.
+    init(isEnabled: Bool, engine: Engine, backends: [Engine: any CleanupBackend]) {
+        self.isEnabled = isEnabled
+        self.engine = engine
+        self.backends = backends
         for backend in backends.values {
             backend.onStateChange = { [weak self] in self?.refreshAvailability() }
         }

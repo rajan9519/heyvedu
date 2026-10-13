@@ -62,6 +62,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         #endif
+        // Unit tests load into this app; don't ask for permissions or download models.
+        if ProcessInfo.processInfo.environment.keys.contains(where: { $0.hasPrefix("XCTest") }) { return }
         let firstRun = !Onboarding.isCompleted
         controller.start(requestPermissions: !firstRun, downloadModels: !firstRun)
         updates.start()

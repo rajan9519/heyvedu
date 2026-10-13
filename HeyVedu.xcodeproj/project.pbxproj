@@ -15,8 +15,19 @@
 		1D0000000000000000000022 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1D0000000000000000000021 /* Sparkle */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		1D0000000000000000000047 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1D0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1D0000000000000000000006;
+			remoteInfo = HeyVedu;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-		1D0000000000000000000004 /* HeyVedu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeyVedu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D0000000000000000000004 /* HeyVedu Dev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HeyVedu Dev.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D0000000000000000000040 /* HeyVeduTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeyVeduTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D0000000000000000000011 /* HeyVedu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HeyVedu.entitlements; sourceTree = "<group>"; };
 		1D0000000000000000000023 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D0000000000000000000030 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -26,6 +37,11 @@
 		1D0000000000000000000005 /* HeyVedu */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = HeyVedu;
+			sourceTree = "<group>";
+		};
+		1D0000000000000000000041 /* HeyVeduTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HeyVeduTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -44,6 +60,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D0000000000000000000044 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -52,6 +75,7 @@
 			children = (
 				1D0000000000000000000010 /* Config */,
 				1D0000000000000000000005 /* HeyVedu */,
+				1D0000000000000000000041 /* HeyVeduTests */,
 				1D0000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -59,7 +83,8 @@
 		1D0000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1D0000000000000000000004 /* HeyVedu.app */,
+				1D0000000000000000000004 /* HeyVedu Dev.app */,
+				1D0000000000000000000040 /* HeyVeduTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,8 +127,31 @@
 				1D0000000000000000000021 /* Sparkle */,
 			);
 			productName = HeyVedu;
-			productReference = 1D0000000000000000000004 /* HeyVedu.app */;
+			productReference = 1D0000000000000000000004 /* HeyVedu Dev.app */;
 			productType = "com.apple.product-type.application";
+		};
+		1D0000000000000000000042 /* HeyVeduTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D0000000000000000000048 /* Build configuration list for PBXNativeTarget "HeyVeduTests" */;
+			buildPhases = (
+				1D0000000000000000000043 /* Sources */,
+				1D0000000000000000000044 /* Frameworks */,
+				1D0000000000000000000045 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1D0000000000000000000046 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1D0000000000000000000041 /* HeyVeduTests */,
+			);
+			name = HeyVeduTests;
+			packageProductDependencies = (
+			);
+			productName = HeyVeduTests;
+			productReference = 1D0000000000000000000040 /* HeyVeduTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -117,6 +165,10 @@
 				TargetAttributes = {
 					1D0000000000000000000006 = {
 						CreatedOnToolsVersion = 26.0;
+					};
+					1D0000000000000000000042 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 1D0000000000000000000006;
 					};
 				};
 			};
@@ -142,12 +194,20 @@
 			projectRoot = "";
 			targets = (
 				1D0000000000000000000006 /* HeyVedu */,
+				1D0000000000000000000042 /* HeyVeduTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		1D0000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D0000000000000000000045 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -164,7 +224,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D0000000000000000000043 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1D0000000000000000000046 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1D0000000000000000000006 /* HeyVedu */;
+			targetProxy = 1D0000000000000000000047 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		1D000000000000000000000B /* Debug */ = {
@@ -272,6 +347,43 @@
 			};
 			name = Release;
 		};
+		1D0000000000000000000049 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1D0000000000000000000030 /* Debug.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heyvedu.app.dev.tests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HeyVedu Dev.app/Contents/MacOS/HeyVedu Dev";
+			};
+			name = Debug;
+		};
+		1D000000000000000000004A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				DEVELOPMENT_TEAM = "";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.heyvedu.app.tests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HeyVedu.app/Contents/MacOS/HeyVedu";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -289,6 +401,15 @@
 			buildConfigurations = (
 				1D000000000000000000000E /* Debug */,
 				1D000000000000000000000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1D0000000000000000000048 /* Build configuration list for PBXNativeTarget "HeyVeduTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D0000000000000000000049 /* Debug */,
+				1D000000000000000000004A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

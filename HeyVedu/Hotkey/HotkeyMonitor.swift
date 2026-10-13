@@ -119,8 +119,9 @@ final class HotkeyMonitor {
         phase = hotkeyHeld ? .awaitingRelease : .idle
     }
 
-    /// Returns true if the event should be swallowed.
-    fileprivate func handle(type: CGEventType, flags: CGEventFlags, keyCode: Int64) -> Bool {
+    /// Returns true if the event should be swallowed. Internal (not private) so tests can
+    /// drive it with synthetic events.
+    func handle(type: CGEventType, flags: CGEventFlags, keyCode: Int64) -> Bool {
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
             DebugTrace.write("hotkey: tap disabled type=\(type.rawValue)")

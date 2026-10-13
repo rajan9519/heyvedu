@@ -89,6 +89,13 @@ If `xcode-select` points to Command Line Tools instead of Xcode, set
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run.sh
 ```
 
+To run the unit tests (⌘U in Xcode). They load into the Debug app, which skips
+permissions and model downloads while tests run:
+
+```bash
+xcodebuild -project HeyVedu.xcodeproj -scheme HeyVedu -skipPackagePluginValidation test
+```
+
 ## Build a DMG release
 
 The release script builds an **Apple silicon (arm64)** DMG for macOS 14 or
