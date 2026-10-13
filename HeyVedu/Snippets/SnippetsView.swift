@@ -30,7 +30,7 @@ struct SnippetsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        MainPage {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Say a phrase, get your text.")
                     .font(.headline)
@@ -62,8 +62,6 @@ struct SnippetsView: View {
                 }
             }
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear { focus = .trigger }
     }
 

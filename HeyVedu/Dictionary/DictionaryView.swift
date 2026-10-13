@@ -18,7 +18,7 @@ struct DictionaryView: View {
     private var trimmedTerm: String { term.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        MainPage {
             Text("Names and terms HeyVedu should always spell your way.")
                 .font(.headline)
 
@@ -46,8 +46,6 @@ struct DictionaryView: View {
                 }
             }
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear { focus = .term }
     }
 

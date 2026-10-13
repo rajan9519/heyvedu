@@ -7,21 +7,16 @@ struct HomeView: View {
     let navigation: MainNavigation
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                header
-                if !controller.canDictate {
-                    SetupChecklist(controller: controller)
-                }
-                StatTiles(stats: controller.stats)
-                ActivityCard(stats: controller.stats)
-                RecentDictations(history: controller.history, copy: controller.copy) {
-                    navigation.section = .history
-                }
+        MainPage(layout: .scroll, spacing: 20) {
+            header
+            if !controller.canDictate {
+                SetupChecklist(controller: controller)
             }
-            .padding(28)
-            .frame(maxWidth: 980, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            StatTiles(stats: controller.stats)
+            ActivityCard(stats: controller.stats)
+            RecentDictations(history: controller.history, copy: controller.copy) {
+                navigation.section = .history
+            }
         }
     }
 
