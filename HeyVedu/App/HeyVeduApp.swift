@@ -8,7 +8,8 @@ struct HeyVeduApp: App {
         MenuBarExtra {
             MenuContent(
                 controller: appDelegate.controller,
-                openMainWindow: { appDelegate.mainWindow.show() }
+                openMainWindow: { appDelegate.mainWindow.show() },
+                openSettings: { appDelegate.mainWindow.showSettings() }
             )
         } label: {
             if appDelegate.controller.menuBarSymbol == "mic" {

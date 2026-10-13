@@ -1,13 +1,16 @@
 import AppKit
+import Observation
 import SwiftUI
 
-/// The app's main window: status and permissions on Home, plus every setting. Opens on
-/// launch and from the Dock once onboarding is done; closing it leaves HeyVedu running
-/// in the menu bar.
+/// The app's main window: dictation stats on Home, the History, Dictionary and Snippets
+/// pages, and Settings. Opens on launch and from the Dock once onboarding is done; closing
+/// it leaves HeyVedu running in the menu bar.
 final class MainWindowController: NSObject, NSWindowDelegate {
     private let controller: DictationController
     private let updates: UpdateController
     private let showWelcomeGuide: () -> Void
+    /// Outlives the window, so reopening it returns to the same page.
+    private let navigation = MainNavigation()
     private var window: NSWindow?
 
     init(controller: DictationController, updates: UpdateController, showWelcomeGuide: @escaping () -> Void) {
@@ -26,12 +29,22 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         window.orderFrontRegardless()
     }
 
+    func showSettings() {
+        navigation.section = .settings
+        show()
+    }
+
     func windowWillClose(_ notification: Notification) {
         window = nil
     }
 
     private func makeWindow() -> NSWindow {
-        let view = MainView(controller: controller, updates: updates, showWelcomeGuide: showWelcomeGuide)
+        let view = MainView(
+            controller: controller,
+            updates: updates,
+            navigation: navigation,
+            showWelcomeGuide: showWelcomeGuide
+        )
         let hosting = NSHostingController(rootView: view)
         hosting.sizingOptions = []
         let window = NSWindow(contentViewController: hosting)
@@ -40,319 +53,152 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
         window.delegate = self
-        window.setContentSize(NSSize(width: 820, height: 620))
-        window.contentMinSize = NSSize(width: 720, height: 520)
+        window.setContentSize(NSSize(width: 900, height: 660))
+        window.contentMinSize = NSSize(width: 760, height: 560)
         window.center()
         window.setFrameAutosaveName("MainWindow")
         return window
     }
 }
 
-private enum SidebarItem: String, CaseIterable, Identifiable {
-    case home, general, shortcut, dictionary, snippets, history, models
+enum MainSection: Hashable {
+    case home, history, dictionary, snippets, settings
 
-    var id: Self { self }
+    /// The pages listed at the top of the sidebar; Settings sits at its bottom.
+    static let pages: [MainSection] = [.home, .history, .dictionary, .snippets]
 
     var title: String {
         switch self {
         case .home: return "Home"
-        case .general: return "General"
-        case .shortcut: return "Shortcut"
+        case .history: return "History"
         case .dictionary: return "Dictionary"
         case .snippets: return "Snippets"
-        case .history: return "History"
-        case .models: return "Models"
+        case .settings: return "Settings"
         }
     }
 
     var icon: String {
         switch self {
         case .home: return "house"
-        case .general: return "gearshape"
-        case .shortcut: return "keyboard"
+        case .history: return "clock.arrow.circlepath"
         case .dictionary: return "character.book.closed"
         case .snippets: return "text.bubble"
-        case .history: return "clock.arrow.circlepath"
-        case .models: return "cpu"
+        case .settings: return "gearshape"
         }
+    }
+}
+
+/// Which page and Settings tab the main window shows.
+@Observable
+final class MainNavigation {
+    var section: MainSection = .home
+    var settingsTab: SettingsTab = .general
+
+    func openSettings(_ tab: SettingsTab) {
+        settingsTab = tab
+        section = .settings
     }
 }
 
 private struct MainView: View {
     let controller: DictationController
     let updates: UpdateController
+    let navigation: MainNavigation
     let showWelcomeGuide: () -> Void
-
-    @State private var section: SidebarItem = .home
 
     var body: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases, selection: $section) { item in
-                Label(item.title, systemImage: item.icon)
+            List(selection: pageSelection) {
+                ForEach(MainSection.pages, id: \.self) { page in
+                    Label(page.title, systemImage: page.icon)
+                }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                UpdateFooter(updates: updates)
+                VStack(spacing: 8) {
+                    UpdateFooter(updates: updates)
+                    Divider()
+                        .padding(.horizontal, 10)
+                    SettingsRow(selected: navigation.section == .settings) {
+                        navigation.section = .settings
+                    }
+                    .padding(.horizontal, 10)
+                }
+                .padding(.bottom, 10)
             }
-            .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
         } detail: {
             detail
-                .navigationTitle(section.title)
+                .navigationTitle(navigation.section.title)
+        }
+        .background {
+            // ⌘, opens Settings, as in other Mac apps.
+            Button("Settings") { navigation.section = .settings }
+                .keyboardShortcut(",")
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
+    }
+
+    /// The sidebar list highlights nothing while Settings is open.
+    private var pageSelection: Binding<MainSection?> {
+        Binding {
+            navigation.section == .settings ? nil : navigation.section
+        } set: { page in
+            if let page { navigation.section = page }
         }
     }
 
     @ViewBuilder private var detail: some View {
-        switch section {
+        switch navigation.section {
         case .home:
-            HomeView(controller: controller, showWelcomeGuide: showWelcomeGuide)
-        case .general:
-            GeneralSettings(controller: controller)
-        case .shortcut:
-            ShortcutSettings(controller: controller)
+            HomeView(controller: controller, navigation: navigation)
+        case .history:
+            HistoryView(history: controller.history, copy: controller.copy) {
+                navigation.openSettings(.privacy)
+            }
         case .dictionary:
             DictionaryView(dictionary: controller.dictionary)
         case .snippets:
             SnippetsView(library: controller.snippets, dictionary: controller.dictionary.matcher)
-        case .history:
-            HistoryView(history: controller.history, copy: controller.copy)
-        case .models:
-            ModelSettings(speechModel: controller.speechModel, cleaner: controller.cleaner)
+        case .settings:
+            SettingsView(
+                controller: controller,
+                navigation: navigation,
+                showWelcomeGuide: showWelcomeGuide
+            )
         }
     }
 }
 
-// MARK: - Home
+/// The Settings entry at the bottom of the sidebar, styled like a sidebar row.
+private struct SettingsRow: View {
+    let selected: Bool
+    let action: () -> Void
 
-private struct HomeView: View {
-    let controller: DictationController
-    let showWelcomeGuide: () -> Void
-
-    private var ready: Bool { controller.canDictate }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(spacing: 16) {
-                    Image("BrandMark")
-                        .resizable()
-                        .frame(width: 56, height: 56)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("HeyVedu").font(.largeTitle.bold())
-                        Label(controller.statusText, systemImage: ready ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                            .foregroundStyle(ready ? .green : .orange)
-                    }
-                }
-
-                HStack(spacing: 10) {
-                    Text("Hold")
-                    HotkeyKeycaps(hotkey: controller.hotkey, heldFlags: 0)
-                    Text("in any app, speak, then let go.")
-                }
-                .font(.title3)
-
-                Text("Double-tap the shortcut for hands-free dictation. Your voice is transcribed on this Mac, and nothing leaves it. Close this window and HeyVedu keeps running in the menu bar.")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Permissions").font(.headline)
-                    PermissionRow(
-                        icon: "mic.fill",
-                        title: "Microphone",
-                        detail: "To hear you while you hold the shortcut. Nothing is recorded otherwise.",
-                        granted: controller.permissions.microphoneGranted,
-                        grant: controller.permissions.requestMicrophone
-                    )
-                    PermissionRow(
-                        icon: "accessibility",
-                        title: "Accessibility",
-                        detail: "To notice \(controller.hotkey.symbols) in any app and paste the text where your cursor is.",
-                        granted: controller.permissions.accessibilityGranted,
-                        grant: controller.permissions.requestAccessibility
-                    )
-                }
-
-                if !controller.speechModel.isReady {
-                    ModelRow(
-                        icon: "waveform",
-                        title: "Speech model",
-                        detail: "Turns your voice into text. Required for dictation.",
-                        status: .speech(controller.speechModel),
-                        download: controller.speechModel.prepare
-                    )
-                }
-
-                if controller.hotkey.modifiers == .function, Hotkey.systemUsesFunctionKey {
-                    FunctionKeyWarning()
-                }
-
-                Button("Show Welcome Guide…", action: showWelcomeGuide)
-            }
-            .padding(28)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
-private struct FunctionKeyWarning: View {
-    var body: some View {
-        HStack {
-            Label("macOS also acts on the 🌐 key. Set “Press 🌐 key to” to Do Nothing.", systemImage: "info.circle")
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button("Open Keyboard Settings…") { Hotkey.openKeyboardSettings() }
-        }
-    }
-}
-
-// MARK: - Settings sections
-
-private struct GeneralSettings: View {
-    let controller: DictationController
+    @State private var hovering = false
 
     var body: some View {
-        @Bindable var controller = controller
-        @Bindable var cleaner = controller.cleaner
-        @Bindable var devices = controller.devices
-        @Bindable var sounds = controller.sounds
-
-        Form {
-            Section {
-                Toggle(isOn: $cleaner.isEnabled) {
-                    Text("Clean up transcripts")
-                    Text("Removes filler words, applies your self-corrections and fixes punctuation.")
-                }
-                Picker("Cleanup engine", selection: $cleaner.engine) {
-                    ForEach(TextCleaner.Engine.supported) { engine in
-                        Text(engine.title).tag(engine)
-                    }
-                }
-                .disabled(!cleaner.isEnabled)
-                if cleaner.isEnabled, case .unavailable(let reason) = cleaner.availability {
-                    Label("\(reason). Pasting raw transcripts until it's ready.", systemImage: "info.circle")
-                        .foregroundStyle(.secondary)
-                }
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: MainSection.settings.icon)
+                    .frame(width: 18)
+                    .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
+                Text(MainSection.settings.title)
+                    .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                Spacer(minLength: 0)
+                Text("⌘,")
+                    .font(.caption)
+                    .foregroundStyle(selected ? AnyShapeStyle(.white.opacity(0.7)) : AnyShapeStyle(.tertiary))
             }
-
-            Section {
-                Picker("Microphone", selection: $devices.selectedDeviceUID) {
-                    Text(systemDefaultLabel).tag(String?.none)
-                    ForEach(devices.inputDevices) { device in
-                        Text(device.name).tag(Optional(device.uid))
-                    }
-                }
-            }
-
-            Section {
-                Picker(selection: $controller.hudPosition) {
-                    ForEach(HUDPosition.allCases) { position in
-                        Text(position.title).tag(position)
-                    }
-                } label: {
-                    Text("Recording indicator")
-                    Text("Notch uses the top of the screen on displays without one.")
-                }
-                Toggle(isOn: $sounds.isEnabled) {
-                    Text("Play sounds")
-                    Text("A short sound when recording starts, finishes or is cancelled.")
-                }
-            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.primary.opacity(hovering ? 0.05 : 0)))
+            )
         }
-        .formStyle(.grouped)
-    }
-
-    private var systemDefaultLabel: String {
-        if let name = controller.devices.defaultInputDevice?.name {
-            return "System Default (\(name))"
-        }
-        return "System Default"
-    }
-}
-
-private struct ShortcutSettings: View {
-    let controller: DictationController
-    @State private var recording = false
-
-    var body: some View {
-        @Bindable var controller = controller
-
-        Form {
-            Section {
-                if recording {
-                    HotkeyRecorderView(current: controller.hotkey) { hotkey in
-                        if let hotkey { controller.hotkey = hotkey }
-                        setRecording(false)
-                    }
-                } else {
-                    LabeledContent("Dictation shortcut") {
-                        HStack(spacing: 12) {
-                            Text(controller.hotkey.symbols)
-                                .font(.title3.weight(.medium))
-                            Button("Change…") { setRecording(true) }
-                        }
-                    }
-                    if controller.hotkey.modifiers == .function, Hotkey.systemUsesFunctionKey {
-                        FunctionKeyWarning()
-                    }
-                }
-            } footer: {
-                Text("Hold the shortcut to dictate, and let go to paste. Esc cancels.")
-            }
-
-            Section {
-                Toggle(isOn: $controller.handsFreeEnabled) {
-                    Text("Double-tap for hands-free")
-                    Text("Double-tap the shortcut to keep recording without holding it. Press it again to finish.")
-                }
-                Picker(selection: $controller.handsFreeSilenceStop) {
-                    ForEach(DictationController.handsFreeSilenceStopChoices, id: \.self) { seconds in
-                        Text(seconds == 0 ? "Never" : "After \(seconds) seconds").tag(seconds)
-                    }
-                } label: {
-                    Text("Stop when you go quiet")
-                    Text("Finish a hands-free dictation by itself once you've stopped talking.")
-                }
-                .disabled(!controller.handsFreeEnabled)
-            }
-        }
-        .formStyle(.grouped)
-        // Leaving the section or closing the window mid-recording must not leave the hotkey off.
-        .onDisappear { setRecording(false) }
-    }
-
-    /// Pressing the current hotkey while recording must not start a dictation.
-    private func setRecording(_ on: Bool) {
-        recording = on
-        controller.hotkeySuspended = on
-    }
-}
-
-private struct ModelSettings: View {
-    let speechModel: SpeechModel
-    let cleaner: TextCleaner
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("HeyVedu runs these models on your Mac. Each downloads once and works offline after that.")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                ModelRow(
-                    icon: "waveform",
-                    title: "Speech model",
-                    detail: "Parakeet TDT v3 turns your voice into text. Required for dictation.",
-                    status: .speech(speechModel),
-                    download: speechModel.prepare
-                )
-                ModelRow(
-                    icon: "text.badge.checkmark",
-                    title: "Cleanup model",
-                    detail: "\(cleaner.engine.name) removes filler words, applies your corrections and fixes punctuation. Choose the engine in General.",
-                    status: .cleanup(cleaner),
-                    download: cleaner.download
-                )
-            }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
     }
 }

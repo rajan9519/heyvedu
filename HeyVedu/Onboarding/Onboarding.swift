@@ -189,7 +189,7 @@ private struct PermissionsStep: View {
     }
 }
 
-/// A permission with an Allow… button. Used by onboarding and the main window's Home page.
+/// A permission with an Allow… button. Used by onboarding.
 struct PermissionRow: View {
     let icon: String
     let title: String
@@ -263,7 +263,7 @@ private struct ModelStep: View {
 }
 
 /// A model's download state with a Download / Try Again button. Used by onboarding and
-/// the main window's Models section.
+/// Settings › Models.
 struct ModelRow: View {
     enum Status {
         case notDownloaded(size: Int64?)

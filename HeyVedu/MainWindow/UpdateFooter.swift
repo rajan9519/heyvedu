@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Bottom of the main window's sidebar: the app version and update status. Once an update
-/// has downloaded it turns into a card with a Relaunch button.
+/// Above Settings at the bottom of the main window's sidebar: the app version and update
+/// status, clickable to check for updates. Once an update has downloaded it turns into a
+/// card with a Relaunch button.
 struct UpdateFooter: View {
     let updates: UpdateController
 
@@ -14,7 +15,6 @@ struct UpdateFooter: View {
             }
         }
         .padding(.horizontal, 10)
-        .padding(.bottom, 10)
         .animation(.easeInOut(duration: 0.2), value: updates.state)
         .animation(.easeInOut(duration: 0.2), value: updates.lastCheckResult)
     }
