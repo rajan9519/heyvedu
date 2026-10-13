@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        controller.theme.apply()
         #if DEBUG
         if CommandLine.arguments.contains(CleanupSelfTest.flag) {
             Task {

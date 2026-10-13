@@ -144,6 +144,12 @@ private struct GeneralSettings: View {
             }
 
             Section {
+                Picker("Appearance", selection: $controller.theme) {
+                    ForEach(AppTheme.allCases) { theme in
+                        Text(theme.title).tag(theme)
+                    }
+                }
+                .pickerStyle(.segmented)
                 Picker(selection: $controller.hudPosition) {
                     ForEach(HUDPosition.allCases) { position in
                         Text(position.title).tag(position)

@@ -30,6 +30,13 @@ final class DictationController {
         }
     }
 
+    var theme: AppTheme = .saved {
+        didSet {
+            theme.save()
+            theme.apply()
+        }
+    }
+
     private(set) var status: Status = .idle
     private(set) var hotkeyAvailable = false
     /// The current recording continues without holding the hotkey.
