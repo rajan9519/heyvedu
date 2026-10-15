@@ -118,6 +118,10 @@ private struct GeneralSettings: View {
 
         Form {
             Section {
+                LaunchAtLoginToggle(launchAtLogin: controller.launchAtLogin)
+            }
+
+            Section {
                 Toggle(isOn: $cleaner.isEnabled) {
                     Text("Clean up transcripts")
                     Text("Removes filler words, applies your self-corrections and fixes punctuation.")
@@ -172,6 +176,39 @@ private struct GeneralSettings: View {
             return "System Default (\(name))"
         }
         return "System Default"
+    }
+}
+
+private struct LaunchAtLoginToggle: View {
+    let launchAtLogin: LaunchAtLogin
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { launchAtLogin.isEnabled }, set: { launchAtLogin.setEnabled($0) })) {
+            Text("Open at login")
+            Text("Start HeyVedu when you log in, so the shortcut is always ready.")
+        }
+        // The user can change login items in System Settings while HeyVedu runs.
+        .onAppear { launchAtLogin.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            launchAtLogin.refresh()
+        }
+        .alert(
+            "Couldn't change Open at login",
+            isPresented: Binding(get: { launchAtLogin.error != nil }, set: { if !$0 { launchAtLogin.error = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+            Button("Open Login Items…") { launchAtLogin.openLoginItemsSettings() }
+        } message: {
+            Text(launchAtLogin.error ?? "")
+        }
+        if launchAtLogin.needsApproval {
+            HStack {
+                Label("Turned off in System Settings. Allow HeyVedu in Login Items.", systemImage: "info.circle")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Open Login Items…") { launchAtLogin.openLoginItemsSettings() }
+            }
+        }
     }
 }
 

@@ -22,6 +22,7 @@ final class DictationController {
     let stats = DictationStats()
     let voiceActivity = VoiceActivity()
     let sounds = SoundCues()
+    let launchAtLogin = LaunchAtLogin()
 
     var hudPosition: HUDPosition = .saved {
         didSet {
