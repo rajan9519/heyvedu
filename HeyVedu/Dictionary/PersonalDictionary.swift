@@ -2,12 +2,15 @@ import Foundation
 import Observation
 import os
 
-/// Words the user wants written a particular way. Applied deterministically, never through
-/// the cleanup prompt (the old vocabulary feature relied on the model and was ignored):
+/// Words the user wants written a particular way. Applied deterministically, whatever the
+/// cleanup model does:
 /// - after cleanup, every match of a term or one of its alternatives is rewritten to the
 ///   term exactly (`DictionaryMatcher.apply`);
 /// - cleanup output that loses a term the transcript had is rejected for that chunk
 ///   (`DictionaryMatcher.missingTerm`), so the model can't "correct" a name away.
+///
+/// Vedu Scribe is also told the few terms that may be in each chunk (`VocabularyMatcher`),
+/// so it can fix mishearings no alternative lists ("cooper netties" → Kubernetes).
 ///
 /// Stored in `Application Support/HeyVedu/Dictionary.json`. Only what the user types here
 /// is kept; dictated text never is.
@@ -25,12 +28,15 @@ final class PersonalDictionary {
         didSet {
             guard entries != oldValue else { return }
             matcher = DictionaryMatcher(entries: entries)
+            vocabulary = VocabularyMatcher(entries: entries)
             save()
         }
     }
 
     /// Rebuilt whenever the entries change, so dictation never compiles patterns.
     private(set) var matcher: DictionaryMatcher
+    /// Picks the terms Vedu Scribe is told about for each chunk; rebuilt with `matcher`.
+    private(set) var vocabulary: VocabularyMatcher
 
     @ObservationIgnored private let fileURL: URL
     @ObservationIgnored private let logger = Logger(subsystem: "com.heyvedu.app", category: "Dictionary")
@@ -40,6 +46,7 @@ final class PersonalDictionary {
         let loaded = Self.load(from: fileURL)
         entries = loaded
         matcher = DictionaryMatcher(entries: loaded)
+        vocabulary = VocabularyMatcher(entries: loaded)
     }
 
     static var defaultFileURL: URL {

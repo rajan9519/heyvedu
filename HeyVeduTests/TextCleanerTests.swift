@@ -140,6 +140,19 @@ struct TextCleanerTests {
         #expect(backend.contexts.last == .plain)
     }
 
+    @Test func eachChunkGetsItsOwnVocab() async {
+        let backend = FakeBackend(isNormalizer: true)
+        backend.splitsAtBars = true
+        backend.outputs["ask pria"] = "Ask Priya."
+        backend.outputs["deploy cooper netties"] = "Deploy Kubernetes."
+        backend.outputs["lunch at noon"] = "Lunch at noon."
+        let vocabulary = VocabularyMatcher(entries: [.init(term: "Kubernetes"), .init(term: "Priya")])
+        let email = CleanupContext(format: .email)
+        _ = await cleaner(backend).clean("ask pria | deploy cooper netties | lunch at noon", context: email, vocabulary: vocabulary)
+        #expect(backend.contexts.map(\.vocab) == [["Priya"], ["Kubernetes"], []])
+        #expect(backend.contexts.allSatisfy { $0.format == .email })
+    }
+
     @Test func emailChunksKeepTheirLayout() async {
         let backend = FakeBackend(isNormalizer: true)
         backend.splitsAtBars = true

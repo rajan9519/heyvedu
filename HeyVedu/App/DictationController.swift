@@ -463,7 +463,8 @@ final class DictationController {
                     let context = await cleanupContext(for: target, lookup: lookup)
                     let started = ContinuousClock.now
                     let result = await cleaner.clean(
-                        trimmed, protected: [dictionary.matcher, snippets.expander.matcher], context: context)
+                        trimmed, protected: [dictionary.matcher, snippets.expander.matcher], context: context,
+                        vocabulary: dictionary.vocabulary)
                     cleanup = result
                     output = result.text
                     fallbackReason = result.fallbackReason

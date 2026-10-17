@@ -5,7 +5,8 @@ import Foundation
 /// `train/ctrl_header.py`), in front of the transcript in the user message:
 ///
 ///     [format: email] [tone: formal]
-///     hi olga um can you send me the logs from yesterday thanks rajan
+///     [vocab: Olga; Kubernetes]
+///     hi olga um can you send me the cooper netties logs from yesterday thanks rajan
 ///
 /// Only non-default keys are sent, and the default context sends no header at all, which
 /// gives exactly the plain cleanup. The model never sees app names or hosts: the app maps
@@ -33,15 +34,30 @@ nonisolated struct CleanupContext: Equatable, Sendable {
 
     var format: Format = .general
     var tone: Tone = .casual
+    /// Personal dictionary terms that may be in this chunk's speech (`VocabularyMatcher`),
+    /// at most 12. The model writes a term's exact spelling where the speech has it or a
+    /// mishearing of it, and leaves unspoken terms out.
+    ///
+    /// Training never combined vocab with `[format: email]` or `[tone: formal]`, so both were
+    /// measured on the r5b test split (2026-10-17) before sending all three together:
+    /// - the 195 vocab rows under email, formal or both: misheard terms fixed 21/24 in every
+    ///   case, as with the trained headers, and an unspoken term inserted in ≤ 2 rows;
+    /// - the 108 email rows with 5 distractor terms added: layout right in 108/108, as
+    ///   without them; 120 formal rows: exact matches 48 vs 49, 1 distractor inserted.
+    var vocab: [String] = []
 
     static let plain = CleanupContext()
 
-    /// The header line, or nil for the plain cleanup. Keys in the trained order.
+    /// The header lines, or nil for the plain cleanup. Keys in the trained order: format and
+    /// tone on one line, vocab on its own.
     var header: String? {
+        var lines: [String] = []
         var fields: [String] = []
         if format != .general { fields.append("[format: \(format.rawValue)]") }
         if tone != .casual { fields.append("[tone: \(tone.rawValue)]") }
-        return fields.isEmpty ? nil : fields.joined(separator: " ")
+        if !fields.isEmpty { lines.append(fields.joined(separator: " ")) }
+        if !vocab.isEmpty { lines.append("[vocab: \(vocab.joined(separator: "; "))]") }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
     /// The user message for one chunk: the header (repeated on every chunk), a newline, then
@@ -50,9 +66,11 @@ nonisolated struct CleanupContext: Equatable, Sendable {
         header.map { "\($0)\n\(transcript)" } ?? transcript
     }
 
-    /// Short description for the debug log, e.g. "email" or "email, formal".
+    /// Short description for the debug log, e.g. "email" or "email, formal, 3 terms". Never
+    /// the terms themselves: they can name people.
     var summary: String {
-        let values = [format != .general ? format.rawValue : nil, tone != .casual ? tone.rawValue : nil].compactMap { $0 }
+        let values = [format != .general ? format.rawValue : nil, tone != .casual ? tone.rawValue : nil,
+                      vocab.isEmpty ? nil : "\(vocab.count) terms"].compactMap { $0 }
         return values.isEmpty ? "plain" : values.joined(separator: ", ")
     }
 }

@@ -215,8 +215,12 @@ final class TextCleaner {
 
     /// Phrases `protected` matches in a chunk (dictionary terms, snippet triggers) must
     /// survive cleanup; a chunk that loses one is pasted raw. `context` says where the text
-    /// goes; engines that weren't trained for it ignore it.
-    func clean(_ transcript: String, protected: [DictionaryMatcher] = [], context: CleanupContext = .plain) async -> Result {
+    /// goes, and `vocabulary` picks each chunk's likely dictionary terms for it; engines that
+    /// weren't trained for them ignore both.
+    func clean(
+        _ transcript: String, protected: [DictionaryMatcher] = [], context: CleanupContext = .plain,
+        vocabulary: VocabularyMatcher = .empty
+    ) async -> Result {
         defer { discardPrepared() }
         guard isEnabled else { return Result(text: transcript, fallbackReason: "cleanup disabled") }
         refreshAvailability()
@@ -233,7 +237,9 @@ final class TextCleaner {
         var fallbackReason: String?
         for chunk in chunks {
             do {
-                let cleaned = try await backend.clean(chunk, instructions: instructions, context: context)
+                var chunkContext = context
+                chunkContext.vocab = vocabulary.terms(for: chunk)
+                let cleaned = try await backend.clean(chunk, instructions: instructions, context: chunkContext)
                 modelOutputs.append(cleaned)
                 if protected.contains(where: { $0.missingTerm(from: chunk, in: cleaned) != nil }) {
                     // The reason is logged, so it doesn't name the word.

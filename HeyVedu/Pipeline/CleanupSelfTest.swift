@@ -6,11 +6,14 @@ import Foundation
 /// cleaner, prints the results, and exits. `engine` is a `TextCleaner.Engine` raw value
 /// (`dictationModel`, `appleIntelligence`); Vedu Scribe by default. With `--context`, the
 /// destination phrases run under each listed context in turn (`all` for every destination with
-/// its default tone), so their outputs can be compared. Only these canned phrases are printed —
-/// never real dictations.
+/// its default tone), so their outputs can be compared. With `--vocab`, the vocab phrases run
+/// against a canned demo dictionary (never the user's), under `--context`'s contexts or a
+/// default set, printing the terms the pre-match sent. Only these canned phrases are
+/// printed — never real dictations.
 enum CleanupSelfTest {
     static let flag = "--cleanup-selftest"
     static let contextFlag = "--context"
+    static let vocabFlag = "--vocab"
 
     static let phrases = [
         "i want to book a meeting for 2pm actually no 3pm",
@@ -38,6 +41,28 @@ enum CleanupSelfTest {
         "hey sam thanks for the update new paragraph i reviewed the draft and it looks good but the budget section needs the q3 numbers new paragraph can you send them by friday cheers alex",
         "groceries milk eggs and uh bread and call the dentist about the appointment",
         "im gonna be late so we should of started without me",
+    ]
+
+    /// A demo dictionary: names and jargon speech recognition gets wrong.
+    static let demoDictionary = VocabularyMatcher(entries: [
+        "Kubernetes", "Priya", "Yevgeny", "Hadassah", "PostgreSQL", "Figma", "Jira", "Siobhan",
+        "Mercer", "Asana", "Zerodha", "Bartholomew", "Grafana", "Okta",
+    ].map { PersonalDictionary.Entry(term: $0) } + [
+        PersonalDictionary.Entry(term: "HeyVedu", alternatives: ["hey vedu", "hey we do"]),
+    ])
+
+    /// Misheard terms the model should fix, then speech with no term the model must leave alone.
+    static let vocabPhrases = [
+        "can you send me the cooper netties logs from yesterday",
+        "tell pria the post gress q l migration is done",
+        "yev ghenny and ha dassa are coming for dinner on friday",
+        "the new graph ana dashboard is live and the okta login works",
+        "i love hey we do it saves me so much time",
+        "hi siobhan can you file a jira ticket for the figma export bug thanks rajan",
+        "the judge showed no mercy at all in that sentencing",
+        "lets grab lunch at noon and talk about the budget",
+        "its a son of a friend of mine who is coming to stay",
+        "we need to ship the update before the weekend",
     ]
 
     /// Every destination with its default tone, as the app sends it.
@@ -81,6 +106,10 @@ enum CleanupSelfTest {
             print("\(cleaner.engine.title) ready after \(started.duration(to: .now))")
         }
         print("Engine: \(cleaner.engine.title) · availability: \(cleaner.availability)")
+        if arguments.contains(vocabFlag) {
+            await runVocab(arguments: arguments, cleaner: cleaner)
+            return
+        }
         guard let index = arguments.firstIndex(of: contextFlag), arguments.indices.contains(index + 1) else {
             for phrase in phrases {
                 await run(phrase, context: .plain, label: nil, cleaner: cleaner)
@@ -99,15 +128,35 @@ enum CleanupSelfTest {
         }
     }
 
-    private static func run(_ phrase: String, context: CleanupContext, label: String?, cleaner: TextCleaner) async {
+    private static func runVocab(arguments: [String], cleaner: TextCleaner) async {
+        var names = ["other", "personalChat", "email", "workChat"]
+        if let index = arguments.firstIndex(of: contextFlag), arguments.indices.contains(index + 1) {
+            names = arguments[index + 1] == "all" ? allContexts : arguments[index + 1].split(separator: ",").map(String.init)
+        }
+        let contexts = names.compactMap { name in context(named: name).map { (name, $0) } }
+        for phrase in vocabPhrases {
+            let terms = demoDictionary.terms(for: phrase)
+            print("\n=== \(phrase)\n    terms sent: \(terms.isEmpty ? "none" : terms.joined(separator: "; "))")
+            for (name, context) in contexts {
+                await run(phrase, context: context, label: name, cleaner: cleaner, vocabulary: demoDictionary)
+            }
+        }
+    }
+
+    private static func run(
+        _ phrase: String, context: CleanupContext, label: String?, cleaner: TextCleaner,
+        vocabulary: VocabularyMatcher = .empty
+    ) async {
         cleaner.prepare()
         let started = ContinuousClock.now
-        let result = await cleaner.clean(phrase, context: context)
+        let result = await cleaner.clean(phrase, context: context, vocabulary: vocabulary)
         let elapsed = ContinuousClock.now - started
         let timing = elapsed.formatted(.units(allowed: [.seconds, .milliseconds], width: .narrow))
         let fallback = result.fallbackReason.map { " · fallback: \($0)" } ?? ""
         if let label {
-            let header = context.header.map { "  header: \($0)" } ?? "  no header"
+            var shown = context
+            shown.vocab = vocabulary.terms(for: phrase)
+            let header = shown.header.map { "  header: \($0.replacingOccurrences(of: "\n", with: " ⏎ "))" } ?? "  no header"
             print("--- \(label)\(header) · \(timing)\(fallback)\n\(result.text)")
         } else {
             print("\nIN:  \(phrase)\nOUT: \(result.text)\n     \(timing)\(fallback)")
