@@ -2,11 +2,11 @@
 import Foundation
 
 /// Debug harness: `HeyVedu.app/Contents/MacOS/HeyVedu --cleanup-selftest [engine]
-/// [--context plain,email,message,notes,email+formal]` runs fixed phrases through the
+/// [--context all|workChat,email+formal,…]` runs fixed phrases through the
 /// cleaner, prints the results, and exits. `engine` is a `TextCleaner.Engine` raw value
 /// (`dictationModel`, `appleIntelligence`); Vedu Scribe by default. With `--context`, the
-/// destination phrases run under each listed context in turn (`all` for every format, plus
-/// email+formal), so their outputs can be compared. Only these canned phrases are printed —
+/// destination phrases run under each listed context in turn (`all` for every destination with
+/// its default tone), so their outputs can be compared. Only these canned phrases are printed —
 /// never real dictations.
 enum CleanupSelfTest {
     static let flag = "--cleanup-selftest"
@@ -40,10 +40,15 @@ enum CleanupSelfTest {
         "im gonna be late so we should of started without me",
     ]
 
-    static let allContexts = ["plain", "email", "message", "notes", "email+formal"]
+    /// Every destination with its default tone, as the app sends it.
+    static let allContexts = Destination.allCases.map(\.rawValue)
 
-    /// "email+formal" → format email, tone formal. Unknown words are reported and skipped.
+    /// A destination ("workChat": its default format and tone), or format and tone words
+    /// ("email+formal"). Unknown words are reported and skipped.
     static func context(named name: String) -> CleanupContext? {
+        if let destination = Destination(rawValue: name) {
+            return CleanupContext(format: destination.format, tone: destination.defaultTone)
+        }
         var context = CleanupContext.plain
         for part in name.split(separator: "+").map(String.init) where part != "plain" {
             if let format = CleanupContext.Format(rawValue: part) {

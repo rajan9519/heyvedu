@@ -138,6 +138,8 @@ private struct GeneralSettings: View {
                 }
             }
 
+            ToneSettings(style: controller.style, cleaner: cleaner)
+
             Section {
                 Picker("Microphone", selection: $devices.selectedDeviceUID) {
                     Text(systemDefaultLabel).tag(String?.none)
@@ -176,6 +178,42 @@ private struct GeneralSettings: View {
             return "System Default (\(name))"
         }
         return "System Default"
+    }
+}
+
+/// The tone per destination; formal for email and work chat until changed. Only Vedu
+/// Scribe was trained for it.
+private struct ToneSettings: View {
+    let style: WritingStyle
+    let cleaner: TextCleaner
+
+    var body: some View {
+        let applies = cleaner.isEnabled && cleaner.engine == .dictationModel
+        Section {
+            ForEach(Destination.allCases, id: \.self) { destination in
+                Picker(selection: Binding(get: { style.tone(for: destination) }, set: { style.setTone($0, for: destination) })) {
+                    ForEach(CleanupContext.Tone.allCases, id: \.self) { tone in
+                        Text(tone.title).tag(tone)
+                    }
+                } label: {
+                    Text(destination.title)
+                    Text(destination.examples)
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
+            .disabled(!applies)
+        } header: {
+            Text("Tone")
+        } footer: {
+            if applies {
+                Text("Formal fixes grammar and spelling and writes out words like “gonna”, keeping your wording. Casual keeps the way you talk. Email is also laid out with its greeting and sign-off on their own lines.")
+            } else if cleaner.isEnabled {
+                Text("Tone works with Vedu Scribe only.")
+            } else {
+                Text("Turn on cleanup to set a tone.")
+            }
+        }
     }
 }
 

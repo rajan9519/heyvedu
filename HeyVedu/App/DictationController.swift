@@ -17,6 +17,7 @@ final class DictationController {
     let speechModel = SpeechModel()
     let cleaner = TextCleaner()
     let dictionary = PersonalDictionary()
+    let style = WritingStyle()
     let snippets = SnippetLibrary()
     let history = DictationHistory()
     let stats = DictationStats()
@@ -516,18 +517,19 @@ final class DictationController {
         }
     }
 
-    /// How to write the text for `app`, the app it's pasted into. Uses the lookup made when
-    /// the hotkey was pressed, unless the user switched apps while speaking.
+    /// How to write the text for `app`, the app it's pasted into, in the user's tone for it.
+    /// Uses the lookup made when the hotkey was pressed, unless the user switched apps while
+    /// speaking.
     private func cleanupContext(for app: NSRunningApplication?, lookup: Task<DictationTarget?, Never>?) async -> CleanupContext {
-        guard let app else { return .plain }
+        guard let app else { return style.context(for: .other) }
         var detected = await lookup?.value
         if detected?.processID != app.processIdentifier {
             detected = await DictationTarget.detect(bundleID: app.bundleIdentifier, processID: app.processIdentifier)
         }
-        guard let detected else { return .plain }
+        let context = style.context(for: detected?.destination ?? .other)
         // The app and page host only, never the text.
-        DebugTrace.write("target: \(detected.summary)")
-        return detected.context
+        DebugTrace.write("target: \(detected?.summary ?? "none"), header \(context.header ?? "none")")
+        return context
     }
 
     // MARK: - Last result

@@ -9,7 +9,7 @@ import Foundation
 ///
 /// Only non-default keys are sent, and the default context sends no header at all, which
 /// gives exactly the plain cleanup. The model never sees app names or hosts: the app maps
-/// them to these few values (`CleanupContext.for(bundleID:host:)`).
+/// them to a `Destination`, which picks the format and, with the user's settings, the tone.
 nonisolated struct CleanupContext: Equatable, Sendable {
     /// Raw values are the trained header values; keep them exact.
     enum Format: String, CaseIterable, Sendable {
@@ -57,26 +57,52 @@ nonisolated struct CleanupContext: Equatable, Sendable {
     }
 }
 
-// MARK: - Where text goes → format
+// MARK: - Where text goes
 
-nonisolated extension CleanupContext {
-    /// The context for a dictation into the app `bundleID`, showing a web page from `host`
-    /// when it is a browser. Unknown apps and sites get the plain cleanup.
-    static func `for`(bundleID: String?, host: String?) -> CleanupContext {
-        if let host = host?.lowercased(),
-           let format = Self.siteFormats.first(where: { site in site.domains.contains { matches(host, $0) } })?.format {
-            return CleanupContext(format: format)
+/// The kinds of places a dictation goes. Each one has the model format it's written in and
+/// the tone it gets unless the user picks another (`WritingStyle`): formal where the reader
+/// is usually a colleague (email, work chat), casual everywhere else. The model never sees
+/// these names, only the format and tone.
+nonisolated enum Destination: String, CaseIterable, Sendable {
+    case email
+    /// Slack, Teams, Google Chat.
+    case workChat
+    /// Messages, WhatsApp, Telegram, Signal, Discord.
+    case personalChat
+    case notes
+    /// Everything not listed, including code editors, terminals and documents.
+    case other
+
+    var format: CleanupContext.Format {
+        switch self {
+        case .email: return .email
+        case .workChat, .personalChat: return .message
+        case .notes: return .notes
+        case .other: return .general
         }
-        if let bundleID, let format = Self.appFormats[bundleID] {
-            return CleanupContext(format: format)
-        }
-        return .plain
     }
 
-    /// Native apps by bundle ID. Code editors, terminals and document apps stay plain:
+    var defaultTone: CleanupContext.Tone {
+        switch self {
+        case .email, .workChat: return .formal
+        case .personalChat, .notes, .other: return .casual
+        }
+    }
+
+    /// Where a dictation into the app `bundleID` goes, showing a web page from `host` when
+    /// it is a browser. A known site wins over its app; unknown apps and sites are `other`.
+    static func `for`(bundleID: String?, host: String?) -> Destination {
+        if let host = host?.lowercased(),
+           let site = sites.first(where: { site in site.domains.contains { matches(host, $0) } }) {
+            return site.destination
+        }
+        return bundleID.flatMap { apps[$0] } ?? .other
+    }
+
+    /// Native apps by bundle ID. Code editors, terminals and document apps stay `other`:
     /// the model has no data for them yet.
-    static let appFormats: [String: Format] = {
-        let groups: [(Format, [String])] = [
+    static let apps: [String: Destination] = {
+        let groups: [(Destination, [String])] = [
             (.email, [
                 "com.apple.mail",
                 "com.microsoft.Outlook",
@@ -90,20 +116,22 @@ nonisolated extension CleanupContext {
                 "com.postbox-inc.postbox",
                 "org.mozilla.thunderbird",
             ]),
-            (.message, [
+            (.workChat, [
                 "com.tinyspeck.slackmacgap",          // Slack
+                "com.microsoft.teams2",
+                "com.microsoft.teams",
+                "com.google.Chat",
+            ]),
+            (.personalChat, [
                 "com.apple.MobileSMS",                // Messages
                 "net.whatsapp.WhatsApp",
                 "desktop.WhatsApp",                   // the older Electron WhatsApp
                 "com.hnc.Discord",
-                "com.microsoft.teams2",
-                "com.microsoft.teams",
                 "ru.keepcoder.Telegram",
                 "org.telegram.desktop",
                 "org.whispersystems.signal-desktop",
                 "com.facebook.archon",                // Messenger
                 "com.facebook.archon.developerID",
-                "com.google.Chat",
                 "com.apple.iChat",
             ]),
             (.notes, [
@@ -118,12 +146,12 @@ nonisolated extension CleanupContext {
                 "com.logseq.logseq",
             ]),
         ]
-        return Dictionary(uniqueKeysWithValues: groups.flatMap { format, ids in ids.map { ($0, format) } })
+        return Dictionary(uniqueKeysWithValues: groups.flatMap { destination, ids in ids.map { ($0, destination) } })
     }()
 
     /// Web apps by host; a domain also matches its subdomains. Checked before the browser's
-    /// own bundle ID, which has no format.
-    static let siteFormats: [(format: Format, domains: [String])] = [
+    /// own bundle ID, which is `other`.
+    static let sites: [(destination: Destination, domains: [String])] = [
         (.email, [
             "mail.google.com",
             "outlook.live.com", "outlook.office.com", "outlook.office365.com", "outlook.cloud.microsoft",
@@ -134,14 +162,16 @@ nonisolated extension CleanupContext {
             "mail.zoho.com",
             "app.hey.com",
         ]),
-        (.message, [
+        (.workChat, [
             "slack.com",
+            "teams.microsoft.com", "teams.live.com", "teams.cloud.microsoft",
+            "chat.google.com",
+        ]),
+        (.personalChat, [
             "web.whatsapp.com",
             "discord.com",
-            "teams.microsoft.com", "teams.live.com", "teams.cloud.microsoft",
             "web.telegram.org",
             "messenger.com",
-            "chat.google.com",
             "messages.google.com",
         ]),
         (.notes, [

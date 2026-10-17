@@ -32,72 +32,99 @@ struct CleanupContextTests {
 
     // MARK: Apps
 
-    @Test func mailAppsGetEmail() {
+    private func destination(_ bundleID: String?, _ host: String? = nil) -> Destination {
+        Destination.for(bundleID: bundleID, host: host)
+    }
+
+    @Test func mailAppsAreEmail() {
         for id in ["com.apple.mail", "com.microsoft.Outlook", "com.readdle.SparkDesktop", "com.superhuman.electron"] {
-            #expect(CleanupContext.for(bundleID: id, host: nil) == CleanupContext(format: .email), "\(id)")
+            #expect(destination(id) == .email, "\(id)")
         }
     }
 
-    @Test func chatAppsGetMessage() {
-        for id in ["com.tinyspeck.slackmacgap", "com.apple.MobileSMS", "net.whatsapp.WhatsApp",
-                   "com.hnc.Discord", "com.microsoft.teams2"] {
-            #expect(CleanupContext.for(bundleID: id, host: nil) == CleanupContext(format: .message), "\(id)")
+    @Test func slackAndTeamsAreWorkChat() {
+        for id in ["com.tinyspeck.slackmacgap", "com.microsoft.teams2", "com.microsoft.teams", "com.google.Chat"] {
+            #expect(destination(id) == .workChat, "\(id)")
         }
     }
 
-    @Test func noteAppsGetNotes() {
+    @Test func messengersArePersonalChat() {
+        for id in ["com.apple.MobileSMS", "net.whatsapp.WhatsApp", "com.hnc.Discord", "ru.keepcoder.Telegram",
+                   "org.whispersystems.signal-desktop"] {
+            #expect(destination(id) == .personalChat, "\(id)")
+        }
+    }
+
+    @Test func noteAppsAreNotes() {
         for id in ["com.apple.Notes", "notion.id", "md.obsidian", "net.shinyfrog.bear", "com.apple.reminders"] {
-            #expect(CleanupContext.for(bundleID: id, host: nil) == CleanupContext(format: .notes), "\(id)")
+            #expect(destination(id) == .notes, "\(id)")
         }
     }
 
-    @Test func editorsTerminalsAndUnknownAppsArePlain() {
+    @Test func editorsTerminalsAndUnknownAppsAreOther() {
         for id in ["com.microsoft.VSCode", "com.apple.dt.Xcode", "com.apple.Terminal", "com.googlecode.iterm2",
                    "com.apple.iWork.Pages", "com.example.unknown"] {
-            #expect(CleanupContext.for(bundleID: id, host: nil) == .plain, "\(id)")
+            #expect(destination(id) == .other, "\(id)")
         }
-        #expect(CleanupContext.for(bundleID: nil, host: nil) == .plain)
+        #expect(destination(nil) == .other)
     }
 
     // MARK: Sites
 
-    @Test func webMailGetsEmail() {
+    @Test func webMailIsEmail() {
         for host in ["mail.google.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com"] {
-            #expect(CleanupContext.for(bundleID: "com.google.Chrome", host: host) == CleanupContext(format: .email), "\(host)")
+            #expect(destination("com.google.Chrome", host) == .email, "\(host)")
         }
     }
 
-    @Test func webChatGetsMessage() {
-        for host in ["app.slack.com", "myteam.slack.com", "web.whatsapp.com", "discord.com", "teams.microsoft.com"] {
-            #expect(CleanupContext.for(bundleID: "com.apple.Safari", host: host) == CleanupContext(format: .message), "\(host)")
+    @Test func webChatIsSplitIntoWorkAndPersonal() {
+        for host in ["app.slack.com", "myteam.slack.com", "teams.microsoft.com", "chat.google.com"] {
+            #expect(destination("com.apple.Safari", host) == .workChat, "\(host)")
+        }
+        for host in ["web.whatsapp.com", "discord.com", "web.telegram.org", "www.messenger.com"] {
+            #expect(destination("com.apple.Safari", host) == .personalChat, "\(host)")
         }
     }
 
     @Test func hostsMatchWholeDomainLabels() {
-        #expect(CleanupContext.for(bundleID: "com.apple.Safari", host: "www.notion.so") == CleanupContext(format: .notes))
-        #expect(CleanupContext.for(bundleID: "com.apple.Safari", host: "MAIL.GOOGLE.COM") == CleanupContext(format: .email))
+        #expect(destination("com.apple.Safari", "www.notion.so") == .notes)
+        #expect(destination("com.apple.Safari", "MAIL.GOOGLE.COM") == .email)
         // Not a subdomain of slack.com, and other Google apps aren't mail.
-        #expect(CleanupContext.for(bundleID: "com.apple.Safari", host: "notslack.com") == .plain)
-        #expect(CleanupContext.for(bundleID: "com.apple.Safari", host: "docs.google.com") == .plain)
-        #expect(CleanupContext.for(bundleID: "com.apple.Safari", host: "google.com") == .plain)
+        #expect(destination("com.apple.Safari", "notslack.com") == .other)
+        #expect(destination("com.apple.Safari", "docs.google.com") == .other)
+        #expect(destination("com.apple.Safari", "google.com") == .other)
     }
 
-    @Test func browserWithoutAKnownHostIsPlain() {
-        #expect(CleanupContext.for(bundleID: "com.google.Chrome", host: nil) == .plain)
-        #expect(CleanupContext.for(bundleID: "com.google.Chrome", host: "example.com") == .plain)
+    @Test func browserWithoutAKnownHostIsOther() {
+        #expect(destination("com.google.Chrome") == .other)
+        #expect(destination("com.google.Chrome", "example.com") == .other)
     }
 
-    @Test func siteFormatWinsOverTheApp() {
-        // An app with its own format showing a web view of another kind (e.g. a mail link in Notion).
-        #expect(CleanupContext.for(bundleID: "notion.id", host: "mail.google.com") == CleanupContext(format: .email))
-        // An unknown host leaves the app's format.
-        #expect(CleanupContext.for(bundleID: "com.apple.mail", host: "example.com") == CleanupContext(format: .email))
+    @Test func siteWinsOverTheApp() {
+        // An app with its own destination showing a web view of another kind.
+        #expect(destination("notion.id", "mail.google.com") == .email)
+        // An unknown host leaves the app's destination.
+        #expect(destination("com.apple.mail", "example.com") == .email)
     }
 
-    @Test func noDomainIsListedTwice() {
-        let domains = CleanupContext.siteFormats.flatMap(\.domains)
+    @Test func noDomainOrAppIsListedTwice() {
+        let domains = Destination.sites.flatMap(\.domains)
         #expect(Set(domains).count == domains.count)
         #expect(domains.allSatisfy { $0 == $0.lowercased() })
+    }
+
+    // MARK: Destinations → header
+
+    @Test func destinationsUseTrainedFormats() {
+        #expect(Destination.email.format == .email)
+        #expect(Destination.workChat.format == .message)
+        #expect(Destination.personalChat.format == .message)
+        #expect(Destination.notes.format == .notes)
+        #expect(Destination.other.format == .general)
+    }
+
+    @Test func emailAndWorkChatAreFormalByDefault() {
+        #expect(Destination.allCases.filter { $0.defaultTone == .formal } == [.email, .workChat])
     }
 
     // MARK: Targets
@@ -105,24 +132,24 @@ struct CleanupContextTests {
     @Test func targetMapsBrowsersByHost() {
         let gmail = DictationTarget(bundleID: "com.brave.Browser", processID: 1, host: "mail.google.com")
         #expect(gmail.isBrowser)
-        #expect(gmail.context == CleanupContext(format: .email))
-        #expect(gmail.summary == "app com.brave.Browser, host mail.google.com (none), format email")
-        let mail = DictationTarget(bundleID: "com.apple.mail", processID: 1)
-        #expect(!mail.isBrowser)
-        #expect(mail.summary == "app com.apple.mail, format email")
+        #expect(gmail.destination == .email)
+        #expect(gmail.summary == "app com.brave.Browser, host mail.google.com (none), destination email")
+        let slack = DictationTarget(bundleID: "com.tinyspeck.slackmacgap", processID: 1)
+        #expect(!slack.isBrowser)
+        #expect(slack.summary == "app com.tinyspeck.slackmacgap, destination workChat")
     }
 
     @Test func nativeAppsAreDetectedWithoutLookingForAHost() async {
         let target = await DictationTarget.detect(bundleID: "com.apple.MobileSMS", processID: -1)
         #expect(target.host == nil)
         #expect(target.hostSource == nil)
-        #expect(target.context == CleanupContext(format: .message))
+        #expect(target.destination == .personalChat)
     }
 
     @Test func browserLookupFailsGracefully() async {
-        // No such process, and Firefox has no Apple Events: no host, and the text is plain.
+        // No such process, and Firefox has no Apple Events: no host, and the destination is other.
         let target = await DictationTarget.detect(bundleID: "org.mozilla.firefox", processID: 999_999)
         #expect(target.host == nil)
-        #expect(target.context == .plain)
+        #expect(target.destination == .other)
     }
 }

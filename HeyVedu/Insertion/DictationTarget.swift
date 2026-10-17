@@ -4,7 +4,7 @@ import Carbon
 
 /// The app a dictation goes into and, in a browser, the host of the page it's on. Read when
 /// the hotkey is pressed (the cursor is in the target then) and mapped to how the text is
-/// written (`CleanupContext.for(bundleID:host:)`).
+/// written (`Destination.for(bundleID:host:)`).
 ///
 /// The page's host comes from Accessibility first: the focused element's enclosing web area
 /// has the page URL (`AXURL`), which needs no extra permission. Browsers that don't expose it
@@ -18,7 +18,7 @@ nonisolated struct DictationTarget: Equatable, Sendable {
     /// How the host was found ("ax", "apple-events"), or why it wasn't; debug log only.
     var hostSource: String?
 
-    var context: CleanupContext { .for(bundleID: bundleID, host: host) }
+    var destination: Destination { .for(bundleID: bundleID, host: host) }
 
     var isBrowser: Bool { bundleID.flatMap { Self.browsers[$0] } != nil }
 
@@ -26,7 +26,7 @@ nonisolated struct DictationTarget: Equatable, Sendable {
     var summary: String {
         var parts = ["app \(bundleID ?? "unknown")"]
         if isBrowser { parts.append("host \(host ?? "unknown") (\(hostSource ?? "none"))") }
-        parts.append("format \(context.summary)")
+        parts.append("destination \(destination.rawValue)")
         return parts.joined(separator: ", ")
     }
 
