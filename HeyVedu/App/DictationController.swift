@@ -15,14 +15,29 @@ final class DictationController {
     let permissions = PermissionsManager()
     let devices = AudioDeviceManager()
     let speechModel = SpeechModel()
-    let cleaner = TextCleaner()
-    let dictionary = PersonalDictionary()
+    let cleaner: TextCleaner
+    let dictionary: PersonalDictionary
     let snippets = SnippetLibrary()
     let history = DictationHistory()
     let stats = DictationStats()
     let voiceActivity = VoiceActivity()
     let sounds = SoundCues()
     let launchAtLogin = LaunchAtLogin()
+    let assist: AssistService
+    /// Suggests dictionary words from the corrections the user makes after a paste.
+    let learner: DictionaryLearner
+
+    init() {
+        let dictionary = PersonalDictionary()
+        let assist = AssistService()
+        self.dictionary = dictionary
+        self.assist = assist
+        cleaner = TextCleaner(assist: assist)
+        assist.cleanupVocabulary = { [dictionary, snippets] in
+            CleanupTask.Vocabulary(entries: dictionary.entries, snippets: snippets.snippets)
+        }
+        learner = DictionaryLearner(dictionary: dictionary, assist: assist)
+    }
 
     var hudPosition: HUDPosition = .saved {
         didSet {
@@ -186,6 +201,17 @@ final class DictationController {
         cleaner.onDownloadedModelReady = { [weak self] in self?.cleanupModelReady() }
         if downloadModels || !cleaner.needsDownload { cleaner.warmUp() }
 
+        learner.onReady = { [weak self] suggestion in self?.offer(suggestion) }
+        assist.start()
+        #if DEBUG
+        // `-debugSuggestionPrompt YES` shows the HUD's suggestion prompt with a sample word.
+        if UserDefaults.standard.bool(forKey: "debugSuggestionPrompt") {
+            hud.showSuggestion(term: "Kubernetes", heard: "cuber netties") { choice in
+                DebugTrace.write("debug suggestion answered: \(choice)")
+            }
+        }
+        #endif
+
         permissions.onChange = { [weak self] in self?.permissionsChanged() }
         permissions.startMonitoring()
 
@@ -336,6 +362,7 @@ final class DictationController {
         if fellBack { pressNotice = "Selected mic unavailable — using default" }
 
         status = .recording
+        learner.dictationStarted()
         // Start cleanup preparation on the initial press so model/session setup overlaps
         // the 250 ms commit delay as well as the time the user spends speaking. Defer it
         // off the event-tap callback so launching a CLI cannot make the tap time out.
@@ -450,7 +477,7 @@ final class DictationController {
                 var awaitingDownload = false
                 var cleanup: TextCleaner.Result?
                 if cleaner.isEnabled {
-                    hud.showProcessing("Cleaning…")
+                    hud.showProcessing(cleaner.engine.sendsTranscripts ? "Cleaning with \(cleaner.engine.name)…" : "Cleaning…")
                     let started = ContinuousClock.now
                     let result = await cleaner.clean(trimmed, protected: [dictionary.matcher, snippets.expander.matcher])
                     cleanup = result
@@ -461,8 +488,11 @@ final class DictationController {
                     DebugTrace.write("cleanup[\(cleaner.engine.rawValue)]: \(ContinuousClock.now - started)\(fallbackReason.map { ", fallback: \($0)" } ?? "")")
                 }
                 // After cleanup, so the model can't undo the user's spellings or touch a
-                // snippet's text.
-                output = snippets.expander.expand(output, dictionary: dictionary.matcher)
+                // snippet's text. Skipped when the engine did both itself (Claude Code or
+                // Codex), whose answer is pasted as is.
+                if cleanup?.isFinal != true {
+                    output = snippets.expander.expand(output, dictionary: dictionary.matcher)
+                }
                 hud.hide()
                 guard !output.isEmpty else {
                     // Vedu Scribe drops filler-only speech ("um") entirely.
@@ -483,6 +513,7 @@ final class DictationController {
                 stats.record(output, duration: recording.duration)
                 let outcome = await inserter.insert(output, into: target)
                 completedDictations += 1
+                if outcome == .pasted { learner.didPaste(output, in: target) }
                 if let message = Self.copiedMessage(for: outcome) {
                     // Ahead of the cleanup notices: the user has to act to get their text.
                     hud.flashInfo(message, for: .seconds(4))
@@ -502,6 +533,22 @@ final class DictationController {
                 // Never log transcript content; error descriptions only.
                 logger.error("Transcription failed: \(error.localizedDescription, privacy: .public)")
                 hud.flash("Transcription failed")
+            }
+        }
+    }
+
+    // MARK: - Dictionary suggestions
+
+    /// Asks about a new dictionary suggestion in the HUD, unless a dictation is under way;
+    /// it stays on the Dictionary page either way.
+    private func offer(_ suggestion: SuggestionStore.Suggestion) {
+        guard status == .idle else { return }
+        hud.showSuggestion(term: suggestion.term, heard: suggestion.heard) { [weak self] choice in
+            guard let self else { return }
+            switch choice {
+            case .add: learner.accept(suggestion)
+            case .notNow: learner.store.snooze(suggestion.id)
+            case .never: learner.store.neverSuggest(suggestion.id)
             }
         }
     }

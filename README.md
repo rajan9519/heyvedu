@@ -300,13 +300,30 @@ The fully local path is the default:
 Microphone → in-memory audio → on-device Parakeet → on-device Vedu Scribe → paste
 ```
 
-| Data | Vedu Scribe / cleanup off | Apple Intelligence |
+| Data | Vedu Scribe / cleanup off | Apple Intelligence | Claude Code or Codex (opt-in) |
+| --- | --- | --- | --- |
+| Recorded audio | Memory only; stays on-device | Memory only; stays on-device | Memory only; stays on-device |
+| Speech recognition | On-device | On-device | On-device |
+| Transcript cleanup | On-device | On-device | **Each transcript, with your dictionary words and snippets, is sent** to Anthropic or OpenAI through your own `claude` or `codex` sign-in. The model applies them itself and its answer is pasted as is. Slower (about 1–3 s per dictation); the raw transcript is pasted if it fails |
+| Dictation history | Off by default: the last result stays in memory for 5 minutes. Opt in to keep it on disk | Same | Same |
+| Personal dictionary and snippets | What you type only, on disk | Same | Same |
+| Word suggestions (off by default) | After a paste, the field is read on-device for up to 20 s; only word pairs are kept, on disk | Same | Same |
+
+Choosing Claude Code or Codex as the cleanup engine (Settings → General) asks first,
+and says that Vedu Scribe is the fastest option and fully local.
+
+**AI Assist** is off by default. It double-checks word suggestions with a
+language model:
+
+| AI Assist engine | What leaves the Mac | Where it goes |
 | --- | --- | --- |
-| Recorded audio | Memory only; stays on-device | Memory only; stays on-device |
-| Speech recognition | On-device | On-device |
-| Transcript cleanup | On-device | On-device |
-| Dictation history | Off by default: the last result stays in memory for 5 minutes. Opt in to keep it on disk | Off by default: the last result stays in memory for 5 minutes. Opt in to keep it on disk |
-| Personal dictionary and snippets | What you type only, on disk | What you type only, on disk |
+| Apple Intelligence (default) | Nothing | On-device |
+| Claude Code or Codex | The sentence you corrected, before and after | Anthropic or OpenAI, through your own `claude` or `codex` sign-in. HeyVedu runs the official CLI with tools, MCP config and saved sessions turned off, and never reads your sign-in token |
+
+To pick a model, HeyVedu asks each CLI which models your account offers, has one
+of them rank the list, and times the top few on fixed test sentences. Only those
+test sentences, model names and timings are involved, and the choice is saved in
+`Application Support/HeyVedu/Assist/ModelPicks.json`.
 
 Text is inserted by briefly placing it on the macOS clipboard, issuing
 **Command + V**, and restoring the previous clipboard contents after roughly

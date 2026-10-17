@@ -39,6 +39,18 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() -> NSWindow {
+        #if DEBUG
+        // `-debugSection dictionary` or `-debugSection settings -debugSettingsTab assist`
+        // opens a page directly, for screenshots without clicking through.
+        let defaults = UserDefaults.standard
+        if let name = defaults.string(forKey: "debugSection"),
+           let section = (MainSection.pages + [.settings]).first(where: { "\($0)" == name }) {
+            navigation.section = section
+        }
+        if let tab = defaults.string(forKey: "debugSettingsTab").flatMap(SettingsTab.init(rawValue:)) {
+            navigation.settingsTab = tab
+        }
+        #endif
         let view = MainView(
             controller: controller,
             updates: updates,
@@ -153,7 +165,9 @@ private struct MainView: View {
                 navigation.openSettings(.privacy)
             }
         case .dictionary:
-            DictionaryView(dictionary: controller.dictionary)
+            DictionaryView(dictionary: controller.dictionary, learner: controller.learner) {
+                navigation.openSettings(.assist)
+            }
         case .snippets:
             SnippetsView(library: controller.snippets, dictionary: controller.dictionary.matcher)
         case .settings:

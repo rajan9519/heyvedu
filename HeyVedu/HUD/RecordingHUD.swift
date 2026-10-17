@@ -39,6 +39,12 @@ final class HUDModel {
         case message(String)
         /// Not a problem, just something the user should know (e.g. text was copied).
         case info(String)
+        /// Asks whether to add a word HeyVedu saw the user correct; the only clickable phase.
+        case suggestion(term: String, heard: String)
+    }
+
+    enum SuggestionChoice {
+        case add, notNow, never
     }
 
     /// How the indicator is drawn, decided each time it is shown.
@@ -62,6 +68,8 @@ final class HUDModel {
     /// When the current hands-free recording locked, for the elapsed timer.
     var handsFreeSince: Date?
     var levels = [Float](repeating: 0, count: HUDModel.barCount)
+    /// Answers the suggestion being shown.
+    @ObservationIgnored var choose: ((SuggestionChoice) -> Void)?
 
     func push(_ level: Float) {
         levels.removeFirst()
@@ -95,6 +103,8 @@ final class RecordingHUD {
     private static let closeAnimation = Animation.spring(duration: 0.3, bounce: 0)
     private static let closeDuration: Duration = .milliseconds(300)
     private static let fadeDuration: TimeInterval = 0.15
+    /// A suggestion nobody answers counts as Not now.
+    private static let suggestionDuration: Duration = .seconds(10)
 
     func showRecording(notice: String?, listening: Bool, handsFree: Bool = false) {
         model.notice = notice
@@ -131,6 +141,31 @@ final class RecordingHUD {
 
     func flashInfo(_ message: String, for duration: Duration = .seconds(1.5)) {
         show(.info(message), for: duration)
+    }
+
+    /// Asks about a dictionary suggestion. `choose` is called once: with the user's answer,
+    /// or `.notNow` if it times out or something else takes over the indicator.
+    func showSuggestion(term: String, heard: String, choose: @escaping (HUDModel.SuggestionChoice) -> Void) {
+        var answered = false
+        let answer: (HUDModel.SuggestionChoice) -> Void = { [weak self] choice in
+            guard !answered else { return }
+            answered = true
+            self?.model.choose = nil
+            choose(choice)
+            if choice != .notNow || self?.isShowingSuggestion == true { self?.hide() }
+        }
+        model.choose = answer  // before showing: the view reads it when the phase changes
+        show(.suggestion(term: term, heard: heard), for: Self.suggestionDuration)
+        // Unanswered, whether it timed out or a recording took over: Not now.
+        Task {
+            try? await Task.sleep(for: Self.suggestionDuration)
+            answer(.notNow)
+        }
+    }
+
+    private var isShowingSuggestion: Bool {
+        if case .suggestion = model.phase { return true }
+        return false
     }
 
     private func show(_ phase: HUDModel.Phase, for duration: Duration) {
@@ -184,6 +219,8 @@ final class RecordingHUD {
         let panel = self.panel ?? makePanel()
         self.panel = panel
         let wasVisible = panel.isVisible
+        // Clicks pass through to the app below except while a suggestion asks a question.
+        panel.ignoresMouseEvents = !isShowingSuggestion
         place(panel)
 
         if case .notch = model.layout {
@@ -226,7 +263,7 @@ final class RecordingHUD {
         panel.hidesOnDeactivate = false
         // The open/close animations are ours; no system fade on top of them.
         panel.animationBehavior = .none
-        panel.contentView = NSHostingView(rootView: HUDView(model: model))
+        panel.contentView = FirstClickHostingView(rootView: HUDView(model: model))
         return panel
     }
 
@@ -295,6 +332,7 @@ private struct HUDView: View {
                         .padding(.vertical, 2)
                         .capsuleGlass()
                 }
+                suggestionButtons
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: atTop ? .top : .bottom)
             .animation(.easeOut(duration: 0.15), value: model.phase)
@@ -311,6 +349,7 @@ private struct HUDView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+                suggestionButtons
             }
             .padding(.top, notchHeight)
             .padding(.horizontal, 20)
@@ -356,6 +395,8 @@ private struct HUDView: View {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
         case .info:
             Image(systemName: "doc.on.clipboard").foregroundStyle(.secondary)
+        case .suggestion:
+            Image(systemName: "character.book.closed").foregroundStyle(Color.brandText)
         }
     }
 
@@ -365,8 +406,31 @@ private struct HUDView: View {
             Waveform(levels: model.levels, active: model.phase == .listening)
         case .processing(let text), .message(let text), .info(let text):
             Text(text).font(.callout).lineLimit(1)
+        case .suggestion(let term, let heard):
+            Text("Add “\(term)”? You fixed “\(heard)”").font(.callout).lineLimit(1).truncationMode(.middle)
         }
     }
+
+    /// Takes the place of the notice line while a suggestion is shown.
+    @ViewBuilder var suggestionButtons: some View {
+        if case .suggestion = model.phase, let choose = model.choose {
+            HStack(spacing: 6) {
+                Button("Add to Dictionary") { choose(.add) }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.brand)
+                Button("Not Now") { choose(.notNow) }
+                Button("Never") { choose(.never) }
+            }
+            .controlSize(.small)
+            // The panel never becomes key; draw the buttons as active anyway.
+            .environment(\.controlActiveState, .key)
+        }
+    }
+}
+
+/// Lets the first click on the non-activating HUD press a button instead of only focusing it.
+private final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 /// Minutes and seconds since hands-free recording started.

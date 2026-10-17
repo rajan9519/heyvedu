@@ -55,6 +55,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        if CommandLine.arguments.contains(AssistSelfTest.flag) {
+            Task {
+                await AssistSelfTest.run()
+                exit(0)
+            }
+            return
+        }
         if CommandLine.arguments.contains(PipelineBenchmark.flag) {
             Task {
                 await PipelineBenchmark.run()

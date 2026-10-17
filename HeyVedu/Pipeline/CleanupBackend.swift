@@ -12,6 +12,11 @@ protocol CleanupBackend: AnyObject {
     /// (filler-only speech, retractions), which the chat-model output guard would reject.
     var isNormalizer: Bool { get }
 
+    /// The engine applies the dictionary and snippets itself and its answer is pasted as
+    /// is: no output guard, no dictionary or snippet pass, no punctuation touch-ups. For
+    /// Claude Code or Codex, which the user chose to do the whole job.
+    var outputIsFinal: Bool { get }
+
     /// For engines that download and load local weights; drives progress in the menu and
     /// the "model ready" notice. Nil for engines without a model lifecycle.
     var modelState: LocalModelState? { get }
@@ -48,6 +53,7 @@ protocol CleanupBackend: AnyObject {
 
 extension CleanupBackend {
     var isNormalizer: Bool { false }
+    var outputIsFinal: Bool { false }
     var modelState: LocalModelState? { nil }
     var downloadSize: Int64? { nil }
     var isDownloaded: Bool { true }

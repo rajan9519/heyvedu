@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, shortcut, models, privacy, about
+    case general, shortcut, models, assist, privacy, about
 
     var id: Self { self }
 
@@ -10,6 +10,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "General"
         case .shortcut: return "Shortcut"
         case .models: return "Models"
+        case .assist: return "AI Assist"
         case .privacy: return "Privacy"
         case .about: return "About"
         }
@@ -20,6 +21,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "slider.horizontal.3"
         case .shortcut: return "keyboard"
         case .models: return "cpu"
+        case .assist: return "sparkles"
         case .privacy: return "hand.raised"
         case .about: return "info.circle"
         }
@@ -47,6 +49,8 @@ struct SettingsView: View {
                     ShortcutSettings(controller: controller)
                 case .models:
                     ModelSettings(speechModel: controller.speechModel, cleaner: controller.cleaner)
+                case .assist:
+                    AssistSettingsView(assist: controller.assist, learner: controller.learner)
                 case .privacy:
                     PrivacySettings(controller: controller)
                 case .about:
@@ -126,7 +130,7 @@ private struct GeneralSettings: View {
                     Text("Clean up transcripts")
                     Text("Removes filler words, applies your self-corrections and fixes punctuation.")
                 }
-                Picker("Cleanup engine", selection: $cleaner.engine) {
+                Picker("Cleanup engine", selection: engineBinding) {
                     ForEach(TextCleaner.Engine.supported) { engine in
                         Text(engine.title).tag(engine)
                     }
@@ -136,6 +140,16 @@ private struct GeneralSettings: View {
                     Label("\(reason). Pasting raw transcripts until it's ready.", systemImage: "info.circle")
                         .foregroundStyle(.secondary)
                 }
+                if cleaner.isEnabled, cleaner.engine.sendsTranscripts {
+                    CloudCleanupNotice(assist: controller.assist)
+                }
+            }
+            .confirmationDialog("Clean up dictations with Claude Code or Codex?",
+                                isPresented: $confirmingCloudCleanup, titleVisibility: .visible) {
+                Button("Use Claude Code or Codex") { controller.cleaner.engine = .assist }
+                Button("Keep \(controller.cleaner.engine.name)", role: .cancel) {}
+            } message: {
+                Text(Self.cloudCleanupWarning)
             }
 
             Section {
@@ -171,11 +185,64 @@ private struct GeneralSettings: View {
         .formStyle(.grouped)
     }
 
+    @State private var confirmingCloudCleanup = false
+
+    static let cloudCleanupWarning = """
+        Vedu Scribe is the fastest option and runs entirely on this Mac.
+
+        Claude Code or Codex is slower (usually 1–3 seconds more per dictation). It sends \
+        every transcript, along with your dictionary words and snippets, to Anthropic or \
+        OpenAI through your own sign-in, whichever is set up, and counts against your plan's \
+        limits.
+
+        The model does the whole job, cleanup, dictionary and snippets, and its answer is \
+        pasted exactly as it wrote it, without HeyVedu's own checks. If it's slow or \
+        unavailable, the raw transcript is pasted instead.
+        """
+
+    /// Choosing the cloud engine asks first; the others switch right away.
+    private var engineBinding: Binding<TextCleaner.Engine> {
+        let cleaner = controller.cleaner
+        return Binding {
+            cleaner.engine
+        } set: { engine in
+            if engine.sendsTranscripts, !cleaner.engine.sendsTranscripts {
+                confirmingCloudCleanup = true
+            } else {
+                cleaner.engine = engine
+            }
+        }
+    }
+
     private var systemDefaultLabel: String {
         if let name = controller.devices.defaultInputDevice?.name {
             return "System Default (\(name))"
         }
         return "System Default"
+    }
+}
+
+/// Under the cleanup picker while Claude Code or Codex cleans dictations: what that costs,
+/// and which model is answering.
+private struct CloudCleanupNotice: View {
+    let assist: AssistService
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label("Slower than Vedu Scribe. Each transcript, with your dictionary and snippets, is sent to Anthropic or OpenAI through your own sign-in, and the model's answer is pasted as is.",
+                  systemImage: "icloud.and.arrow.up")
+                .foregroundStyle(.orange)
+            Text(modelLine)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var modelLine: String {
+        if !assist.hasUsableCLI { return "Sign in to Claude Code or Codex first. Until then the raw transcript is pasted." }
+        if assist.isMeasuring { return "Finding the fastest model your account offers…" }
+        guard let route = assist.cleanupRoute else { return "No model available yet." }
+        return "Using \(assist.name(of: route)). Change it in Settings → AI Assist."
     }
 }
 
@@ -305,13 +372,173 @@ private struct ModelSettings: View {
                 ModelRow(
                     icon: "text.badge.checkmark",
                     title: "Cleanup model",
-                    detail: "\(cleaner.engine.name) removes filler words, applies your corrections and fixes punctuation. Choose the engine in General.",
+                    detail: cleaner.engine.sendsTranscripts
+                        ? "\(cleaner.engine.name) removes filler words, applies your corrections and fixes punctuation. It runs in the cloud through your own sign-in, not on this Mac. Choose the engine in General."
+                        : "\(cleaner.engine.name) removes filler words, applies your corrections and fixes punctuation. Choose the engine in General.",
                     status: .cleanup(cleaner),
                     download: cleaner.download
                 )
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+// MARK: - AI Assist
+
+private struct AssistSettingsView: View {
+    @Bindable var assist: AssistService
+    let learner: DictionaryLearner
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(isOn: $assist.isEnabled) {
+                    Text("Use AI Assist")
+                    Text("A language model double-checks the words HeyVedu suggests from your corrections, so fewer wrong ones come up. Without it, a simple sounds-alike check is used.")
+                }
+                if assist.isEnabled, !learner.isEnabled {
+                    Label("Turn on “Suggest words from your corrections” in Dictionary to use it.", systemImage: "info.circle")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if assist.cleansDictations, !(assist.isEnabled && assist.engine == .cli) {
+                cleanupOnlySections
+            }
+
+            if assist.isEnabled {
+                Section {
+                    Picker("Engine", selection: $assist.engine) {
+                        ForEach(AssistSettings.Engine.allCases) { engine in
+                            Text(engine.title).tag(engine)
+                        }
+                    }
+                    .pickerStyle(.radioGroup)
+                    switch assist.engine {
+                    case .apple:
+                        ProviderStatusRow(provider: .apple, status: assist.statuses[.apple])
+                    case .cli:
+                        ProviderStatusRow(provider: .claude, status: assist.statuses[.claude])
+                        ProviderStatusRow(provider: .codex, status: assist.statuses[.codex])
+                    }
+                } header: {
+                    Text("Where requests go")
+                } footer: {
+                    Text(assist.engine == .apple
+                         ? "Runs on this Mac. Nothing is sent anywhere."
+                         : "Sends the sentence you edited, before and after, to Anthropic or OpenAI through your own Claude Code or Codex sign-in. It counts against your plan’s limits. HeyVedu never sees or stores your sign-in.")
+                }
+
+                if assist.engine == .cli {
+                    modelSection
+                }
+
+                Section {
+                    Stepper(value: $assist.dailyCap, in: 10...500, step: 10) {
+                        Text("Daily limit: \(assist.dailyCap) requests")
+                    }
+                    LabeledContent("Today") {
+                        Text(activity).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Usage")
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .task { await assist.refreshStatus() }
+    }
+
+    /// Cleanup uses the CLIs even with AI Assist off; show their status and model here too.
+    private var cleanupOnlySections: some View {
+        Group {
+            Section {
+                ProviderStatusRow(provider: .claude, status: assist.statuses[.claude])
+                ProviderStatusRow(provider: .codex, status: assist.statuses[.codex])
+            } header: {
+                Text("Cleanup")
+            } footer: {
+                Text("Your cleanup engine is Claude Code or Codex (Settings → General), so each transcript, with your dictionary and snippets, is sent to Anthropic or OpenAI through your own sign-in. The model's answer is pasted as is.")
+            }
+            modelSection
+        }
+    }
+
+    private var modelSection: some View {
+        Section {
+            Picker("Model", selection: $assist.pinnedRoute) {
+                Text(fastestLabel).tag(AssistRoute?.none)
+                ForEach(measuredRoutes, id: \.self) { route in
+                    Text(assist.name(of: route)).tag(Optional(route))
+                }
+            }
+            if assist.cleansDictations, let route = assist.cleanupRoute {
+                LabeledContent("Cleanup uses") {
+                    Text(assist.name(of: route)).foregroundStyle(.secondary)
+                }
+            }
+            LabeledContent {
+                if assist.isMeasuring {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button("Re-check Models", action: assist.recheckModels)
+                }
+            } label: {
+                Text("Last checked")
+                Text(lastChecked)
+            }
+        } header: {
+            Text("Model")
+        } footer: {
+            Text("HeyVedu asks each CLI which models your account offers and uses the cheapest one, in its newest version, that gets a few test sentences right (for example Claude Code’s Haiku or Codex’s Luna). It checks again when a CLI updates, once a week, or here. Pick another model here to use it for both word suggestions and cleanup.")
+        }
+    }
+
+    private var fastestLabel: String {
+        guard let first = (assist.pick ?? assist.cleanupPick)?.chain.first else { return "Cheapest (not checked yet)" }
+        return "Cheapest (\(assist.name(of: first)))"
+    }
+
+    /// Every model that passed a measurement, for either task.
+    private var measuredRoutes: [AssistRoute] {
+        var seen = Set<AssistRoute>()
+        return ((assist.pick?.chain ?? []) + (assist.cleanupPick?.chain ?? [])).filter { seen.insert($0).inserted }
+    }
+
+    private var lastChecked: String {
+        if assist.isMeasuring { return "Measuring models…" }
+        guard let date = [assist.pick, assist.cleanupPick].compactMap({ $0?.measuredAt }).max() else { return "Not yet" }
+        return date.formatted(.relative(presentation: .named))
+    }
+
+    private var activity: String {
+        let count = "\(assist.requestsToday) request\(assist.requestsToday == 1 ? "" : "s")"
+        guard let route = assist.lastRoute else { return count }
+        return "\(count) · last on \(assist.name(of: route))"
+    }
+}
+
+private struct ProviderStatusRow: View {
+    let provider: AssistProviderID
+    let status: AssistAvailability?
+
+    var body: some View {
+        LabeledContent(provider.title) {
+            switch status {
+            case nil:
+                ProgressView().controlSize(.small)
+            case .available(let version):
+                Label(version.map { "Ready · \($0)" } ?? "Ready", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            case .outdated(_, let message):
+                Label(message, systemImage: "arrow.up.circle").foregroundStyle(.orange)
+            case .notInstalled:
+                Text("Not installed").foregroundStyle(.secondary)
+            case .signedOut(let message), .failed(let message):
+                Text(message).foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -353,7 +580,9 @@ private struct PrivacySettings: View {
             } header: {
                 Text("Your data")
             } footer: {
-                Text("Your voice is transcribed on this Mac, and nothing leaves it.")
+                Text(controller.cleaner.engine.sendsTranscripts
+                     ? "Your voice is transcribed on this Mac. Transcripts, with your dictionary and snippets, are then cleaned up by Claude Code or Codex, which sends them to Anthropic or OpenAI. Switch to Vedu Scribe in General to keep everything local."
+                     : "Your voice is transcribed on this Mac, and nothing leaves it unless you turn on AI Assist with Claude Code or Codex.")
             }
         }
         .formStyle(.grouped)

@@ -8,6 +8,8 @@ import os
 /// fillers, fixes grammar and punctuation. Interchangeable engines, each a `CleanupBackend`:
 /// - Vedu Scribe (default): our own Qwen3.5-0.8B fine-tune, on-device with MLX.
 /// - Apple Intelligence: on-device Foundation Model (text never leaves the Mac).
+/// - Claude Code or Codex: the user's own CLI sign-in, through AI Assist. Opt-in, slower,
+///   and the transcript leaves the Mac.
 ///
 /// There is no timeout: slow responses are awaited. Only when an engine cannot produce
 /// usable text (unavailable, refusal, error, or an output that drifts from what was said)
@@ -18,6 +20,7 @@ final class TextCleaner {
     enum Engine: String, CaseIterable, Identifiable {
         case dictationModel
         case appleIntelligence
+        case assist
 
         static let defaultEngine = Engine.dictationModel
 
@@ -27,30 +30,37 @@ final class TextCleaner {
             switch self {
             case .dictationModel: return "Vedu Scribe"
             case .appleIntelligence: return "Apple Intelligence"
+            case .assist: return "Claude Code or Codex"
             }
         }
 
         var title: String {
             switch self {
-            case .dictationModel, .appleIntelligence: return "\(name) (on-device)"
+            case .dictationModel: return "\(name) (on-device, fastest)"
+            case .appleIntelligence: return "\(name) (on-device)"
+            case .assist: return "\(name) (cloud, slower)"
             }
         }
+
+        /// The transcript leaves the Mac.
+        var sendsTranscripts: Bool { self == .assist }
 
         /// Engines this Mac's macOS can run; the settings picker lists only these.
         static var supported: [Engine] { allCases.filter(\.isSupported) }
 
         var isSupported: Bool {
             switch self {
-            case .dictationModel: return true
+            case .dictationModel, .assist: return true
             case .appleIntelligence:
                 if #available(macOS 26, *) { return true }
                 return false
             }
         }
 
-        fileprivate func makeBackend() -> any CleanupBackend {
+        fileprivate func makeBackend(assist: AssistService) -> any CleanupBackend {
             switch self {
             case .dictationModel: return DictationModelBackend()
+            case .assist: return AssistCleanupBackend(assist: assist)
             case .appleIntelligence:
                 if #available(macOS 26, *) { return AppleIntelligenceBackend() }
                 return UnsupportedBackend(reason: "Apple Intelligence requires macOS 26 or later")
@@ -78,6 +88,9 @@ final class TextCleaner {
         /// What the model returned for each chunk, joined, before any guard or polish.
         /// Nil when no model ran. Kept for opt-in history only, never logged.
         var modelOutput: String?
+        /// `text` is the engine's answer as is, dictionary and snippets already applied:
+        /// paste it without any further pass. False whenever any chunk fell back.
+        var isFinal = false
     }
 
     /// User toggle; persisted.
@@ -125,7 +138,7 @@ final class TextCleaner {
     /// Settings of engines that no longer exist.
     private static let retiredKeys = ["claudeModel", "s1MiniStyling", "s1MiniMadeDefault"]
 
-    convenience init() {
+    convenience init(assist: AssistService = AssistService()) {
         let defaults = UserDefaults.standard
         // One-time switch to Vedu Scribe when it became the default engine.
         if !defaults.bool(forKey: Self.defaultMigrationKey) {
@@ -139,7 +152,7 @@ final class TextCleaner {
             // An engine saved on a newer macOS falls back to the default here.
             engine: defaults.string(forKey: Self.engineKey).flatMap(Engine.init(rawValue:))
                 .flatMap { $0.isSupported ? $0 : nil } ?? .defaultEngine,
-            backends: Dictionary(uniqueKeysWithValues: Engine.allCases.map { ($0, $0.makeBackend()) })
+            backends: Dictionary(uniqueKeysWithValues: Engine.allCases.map { ($0, $0.makeBackend(assist: assist)) })
         )
     }
 
@@ -234,7 +247,9 @@ final class TextCleaner {
             do {
                 let cleaned = try await backend.clean(chunk, instructions: instructions)
                 modelOutputs.append(cleaned)
-                if protected.contains(where: { $0.missingTerm(from: chunk, in: cleaned) != nil }) {
+                if backend.outputIsFinal {
+                    if !cleaned.isEmpty { outputs.append(cleaned) }
+                } else if protected.contains(where: { $0.missingTerm(from: chunk, in: cleaned) != nil }) {
                     // The reason is logged, so it doesn't name the word.
                     outputs.append(backend.isNormalizer ? TextPolish.finalize(chunk) : chunk)
                     fallbackReason = "cleanup changed a dictionary word or snippet"
@@ -255,11 +270,14 @@ final class TextCleaner {
             }
         }
         let joined = outputs.filter { !$0.isEmpty }.joined(separator: " ")
-        // Normalizers own casing and punctuation (the fine-tune emits lists, for one).
+        let isFinal = backend.outputIsFinal && fallbackReason == nil
+        // Normalizers own casing and punctuation (the fine-tune emits lists, for one), and a
+        // final answer is pasted exactly as the engine wrote it.
         return Result(
-            text: backend.isNormalizer ? joined : TextPolish.finalize(joined),
+            text: backend.isNormalizer || isFinal ? joined : TextPolish.finalize(joined),
             fallbackReason: fallbackReason,
-            modelOutput: modelOutputs.isEmpty ? nil : modelOutputs.joined(separator: " ")
+            modelOutput: modelOutputs.isEmpty ? nil : modelOutputs.joined(separator: " "),
+            isFinal: isFinal
         )
     }
 }

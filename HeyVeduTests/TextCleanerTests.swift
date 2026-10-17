@@ -10,6 +10,7 @@ final class FakeBackend: CleanupBackend {
     }
 
     var isNormalizer: Bool
+    var outputIsFinal = false
     var onStateChange: (() -> Void)?
     var available: TextCleaner.Availability = .available
     /// Splits transcripts at "|" when set.
@@ -46,6 +47,26 @@ struct TextCleanerTests {
             .dictationModel: backend,
             .appleIntelligence: FakeBackend(),
         ])
+    }
+
+    @Test func finalOutputIsPastedAsIs() async {
+        let backend = FakeBackend()
+        backend.outputIsFinal = true
+        // Would fail the output guard, lose a dictionary term and get a period from TextPolish.
+        backend.outputs["send it to hey vedu"] = "thanks,\nAlex"
+        let matcher = DictionaryMatcher(entries: [.init(term: "HeyVedu", alternatives: ["hey vedu"])])
+        let result = await cleaner(backend).clean("send it to hey vedu", protected: [matcher])
+        #expect(result.text == "thanks,\nAlex")
+        #expect(result.isFinal)
+        #expect(result.fallbackReason == nil)
+    }
+
+    @Test func finalEngineFailureFallsBackAndIsNotFinal() async {
+        let backend = FakeBackend()
+        backend.outputIsFinal = true
+        let result = await cleaner(backend).clean("send it to hey vedu")
+        #expect(result.text == "Send it to hey vedu.")
+        #expect(!result.isFinal)
     }
 
     @Test func disabledReturnsTheTranscript() async {

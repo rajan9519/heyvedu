@@ -3,6 +3,8 @@ import SwiftUI
 /// Editor for the personal dictionary: the main window's Dictionary section.
 struct DictionaryView: View {
     @Bindable var dictionary: PersonalDictionary
+    let learner: DictionaryLearner
+    let openAssistSettings: () -> Void
 
     @State private var term = ""
     /// Alternatives for the entry being written, one per chip.
@@ -21,6 +23,8 @@ struct DictionaryView: View {
         MainPage {
             Text("Names and terms HeyVedu should always spell your way.")
                 .font(.headline)
+
+            SuggestionsSection(learner: learner, openAssistSettings: openAssistSettings)
 
             entryEditor
 
@@ -149,6 +153,71 @@ struct DictionaryView: View {
         alternatives = []
         newAlternative = ""
         focus = .term
+    }
+}
+
+/// Turns auto-learn on and lists the words it suggests, each waiting for Add or Never.
+private struct SuggestionsSection: View {
+    @Bindable var learner: DictionaryLearner
+    let openAssistSettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $learner.isEnabled) {
+                Text("Suggest words from your corrections")
+                Text("After a paste, HeyVedu reads the field for a few seconds and notices names you fix, like “get hub” → “GitHub”. Only the word pairs are kept.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .toggleStyle(.switch)
+            if learner.isEnabled {
+                HStack(spacing: 12) {
+                    Toggle("Ask in the recording indicator", isOn: $learner.promptsInHUD)
+                        .toggleStyle(.checkbox)
+                    Spacer()
+                    Button("AI Assist Settings…", action: openAssistSettings)
+                        .buttonStyle(.link)
+                }
+                .font(.callout)
+            }
+            let ready = learner.store.ready
+            if !ready.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(ready) { suggestion in
+                        SuggestionRow(suggestion: suggestion,
+                                      add: { learner.accept(suggestion) },
+                                      never: { learner.store.neverSuggest(suggestion.id) })
+                        if suggestion.id != ready.last?.id { Divider() }
+                    }
+                }
+                .padding(.horizontal, 10)
+                .background(Color.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+    }
+}
+
+private struct SuggestionRow: View {
+    let suggestion: SuggestionStore.Suggestion
+    let add: () -> Void
+    let never: () -> Void
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(suggestion.term).fontWeight(.medium)
+                Text("you fixed “\(suggestion.heard)”" + (suggestion.count > 1 ? " \(suggestion.count) times" : ""))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Never", action: never)
+                .buttonStyle(.borderless)
+            Button("Add", action: add)
+                .buttonStyle(.borderedProminent)
+                .tint(.brand)
+        }
+        .padding(.vertical, 6)
     }
 }
 
