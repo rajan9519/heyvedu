@@ -17,6 +17,7 @@ final class FakeBackend: CleanupBackend {
     /// Output for each chunk; a missing entry throws.
     var outputs: [String: String] = [:]
     private(set) var cleanedChunks: [String] = []
+    private(set) var contexts: [CleanupContext] = []
     private(set) var discardCount = 0
 
     init(isNormalizer: Bool = false) {
@@ -32,8 +33,9 @@ final class FakeBackend: CleanupBackend {
         return transcript.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
     }
 
-    func clean(_ chunk: String, instructions: String) async throws -> String {
+    func clean(_ chunk: String, instructions: String, context: CleanupContext) async throws -> String {
         cleanedChunks.append(chunk)
+        contexts.append(context)
         guard let output = outputs[chunk] else { throw Failure() }
         return output
     }
@@ -124,6 +126,37 @@ struct TextCleanerTests {
         let result = await cleaner(backend).clean("send my calendly link", protected: [snippets.matcher])
         #expect(result.text == "Send my calendly link.")
         #expect(snippets.expand(result.text, dictionary: .empty) == "Send https://x.")
+    }
+
+    @Test func contextReachesTheBackendForEveryChunk() async {
+        let backend = FakeBackend(isNormalizer: true)
+        backend.splitsAtBars = true
+        backend.outputs["hi olga"] = "Hi Olga,"
+        backend.outputs["thanks"] = "Thanks."
+        let email = CleanupContext(format: .email)
+        _ = await cleaner(backend).clean("hi olga | thanks", context: email)
+        #expect(backend.contexts == [email, email])
+        _ = await cleaner(backend).clean("hi olga")
+        #expect(backend.contexts.last == .plain)
+    }
+
+    @Test func emailChunksKeepTheirLayout() async {
+        let backend = FakeBackend(isNormalizer: true)
+        backend.splitsAtBars = true
+        backend.outputs["one"] = "Hi Olga,\n\nCan you send the logs?"
+        backend.outputs["two"] = "And the report."
+        backend.outputs["three"] = "Thanks,\nRajan"
+        let result = await cleaner(backend).clean("one | two | three", context: CleanupContext(format: .email))
+        #expect(result.text == "Hi Olga,\n\nCan you send the logs?\n\nAnd the report.\n\nThanks,\nRajan")
+        #expect(result.modelOutput == result.text)
+    }
+
+    @Test func plainAndChatChunksAreJoinedWithSpaces() {
+        let pieces = ["Hi Mei,\nfirst.", "Second.", "Third."]
+        #expect(TextCleaner.join(pieces, context: .plain) == "Hi Mei,\nfirst. Second. Third.")
+        #expect(TextCleaner.join(pieces, context: CleanupContext(format: .message)) == "Hi Mei,\nfirst. Second. Third.")
+        #expect(TextCleaner.join(["One.", "Two."], context: CleanupContext(format: .notes)) == "One. Two.")
+        #expect(TextCleaner.join(["- One\n- Two", "Three."], context: CleanupContext(format: .notes)) == "- One\n- Two\n\nThree.")
     }
 }
 

@@ -178,8 +178,9 @@ final class DictationModelBackend: CleanupBackend {
     }
 
     /// Cleans one chunk. An empty result is valid: filler-only input ("um") has no
-    /// written form. The model was trained on a fixed prompt, so `instructions` are not used.
-    func clean(_ chunk: String, instructions: String) async throws -> String {
+    /// written form. The model was trained on a fixed prompt, so `instructions` are not used;
+    /// `context` goes in as the control header it was trained on, in front of the transcript.
+    func clean(_ chunk: String, instructions: String, context: CleanupContext) async throws -> String {
         guard let container else {
             throw BackendError.notReady(availability().reason ?? "Vedu Scribe isn't loaded")
         }
@@ -187,12 +188,13 @@ final class DictationModelBackend: CleanupBackend {
         // Lowercased so the model restores casing itself rather than trusting the ASR's.
         let transcript = Self.sanitize(chunk).lowercased()
         let input = UserInput(
-            chat: [.system(Self.systemPrompt), .user(transcript)],
+            chat: [.system(Self.systemPrompt), .user(context.userMessage(for: transcript))],
             // Trained with thinking disabled (empty think block in the prompt).
             additionalContext: ["enable_thinking": false]
         )
         let transcriptTokens = await container.encode(transcript).count
-        // Same cap and greedy decoding as the training repo's eval (predict_mlx.py).
+        // Same cap and greedy decoding as the training repo's eval (predict_mlx.py), which
+        // counts the transcript without the header.
         let parameters = GenerateParameters(
             maxTokens: Int(ceil(Double(transcriptTokens) * 1.4)) + 48,
             temperature: 0

@@ -5,7 +5,7 @@ import Foundation
 ///
 /// To add an engine: implement this protocol in its own file, add a case to
 /// `TextCleaner.Engine` with a title, and return the new backend from `makeBackend()`.
-/// Only `availability()` and `clean(_:instructions:)` are required; the rest have defaults.
+/// Only `availability()` and `clean(_:instructions:context:)` are required; the rest have defaults.
 protocol CleanupBackend: AnyObject {
     /// True for models trained only to normalize dictation. Their output is trusted as-is:
     /// they own casing and punctuation, and may legitimately drop most of a transcript
@@ -43,7 +43,9 @@ protocol CleanupBackend: AnyObject {
     /// Splits a transcript into pieces small enough for one `clean` call each.
     func chunks(of transcript: String, instructions: String) async -> [String]
 
-    func clean(_ chunk: String, instructions: String) async throws -> String
+    /// `context` says where the text goes (email, chat, notes); engines that weren't trained
+    /// for it ignore it.
+    func clean(_ chunk: String, instructions: String, context: CleanupContext) async throws -> String
 }
 
 extension CleanupBackend {

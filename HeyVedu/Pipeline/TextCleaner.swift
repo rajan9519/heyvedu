@@ -214,8 +214,9 @@ final class TextCleaner {
     }
 
     /// Phrases `protected` matches in a chunk (dictionary terms, snippet triggers) must
-    /// survive cleanup; a chunk that loses one is pasted raw.
-    func clean(_ transcript: String, protected: [DictionaryMatcher] = []) async -> Result {
+    /// survive cleanup; a chunk that loses one is pasted raw. `context` says where the text
+    /// goes; engines that weren't trained for it ignore it.
+    func clean(_ transcript: String, protected: [DictionaryMatcher] = [], context: CleanupContext = .plain) async -> Result {
         defer { discardPrepared() }
         guard isEnabled else { return Result(text: transcript, fallbackReason: "cleanup disabled") }
         refreshAvailability()
@@ -232,7 +233,7 @@ final class TextCleaner {
         var fallbackReason: String?
         for chunk in chunks {
             do {
-                let cleaned = try await backend.clean(chunk, instructions: instructions)
+                let cleaned = try await backend.clean(chunk, instructions: instructions, context: context)
                 modelOutputs.append(cleaned)
                 if protected.contains(where: { $0.missingTerm(from: chunk, in: cleaned) != nil }) {
                     // The reason is logged, so it doesn't name the word.
@@ -254,13 +255,28 @@ final class TextCleaner {
                 fallbackReason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
         }
-        let joined = outputs.filter { !$0.isEmpty }.joined(separator: " ")
+        let joined = Self.join(outputs.filter { !$0.isEmpty }, context: context)
         // Normalizers own casing and punctuation (the fine-tune emits lists, for one).
         return Result(
             text: backend.isNormalizer ? joined : TextPolish.finalize(joined),
             fallbackReason: fallbackReason,
-            modelOutput: modelOutputs.isEmpty ? nil : modelOutputs.joined(separator: " ")
+            modelOutput: modelOutputs.isEmpty ? nil : Self.join(modelOutputs, context: context)
         )
+    }
+
+    /// Chunks are joined with spaces, except that an email or note keeps its layout: a chunk
+    /// that has line breaks (greeting, sign-off, list) is set off as its own paragraph.
+    nonisolated static func join(_ pieces: [String], context: CleanupContext) -> String {
+        guard context.format == .email || context.format == .notes else { return pieces.joined(separator: " ") }
+        var joined = ""
+        for (index, piece) in pieces.enumerated() {
+            if index > 0 {
+                let laidOut = pieces[index - 1].contains("\n") || piece.contains("\n")
+                joined += laidOut ? "\n\n" : " "
+            }
+            joined += piece
+        }
+        return joined
     }
 }
 
@@ -322,7 +338,9 @@ final class AppleIntelligenceBackend: CleanupBackend {
         discardPrepared()
     }
 
-    func clean(_ chunk: String, instructions: String) async throws -> String {
+    /// `context` is ignored: the general model's prompt isn't tuned for layouts, and the output
+    /// guard would reject an email layout it invented.
+    func clean(_ chunk: String, instructions: String, context: CleanupContext) async throws -> String {
         let session = preparedSession ?? LanguageModelSession(model: model, instructions: instructions)
         preparedSession = nil
         do {
@@ -385,7 +403,7 @@ final class UnsupportedBackend: CleanupBackend {
         .unavailable(reason)
     }
 
-    func clean(_ chunk: String, instructions: String) async throws -> String {
+    func clean(_ chunk: String, instructions: String, context: CleanupContext) async throws -> String {
         chunk
     }
 }

@@ -5,8 +5,11 @@
 	<!-- Not sandboxed: CGEventTap and synthetic ⌘V are unavailable inside the App Sandbox. -->
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
-	<!-- Hardened runtime stays on; microphone is the only exception granted. -->
+	<!-- Hardened runtime stays on; the microphone and Apple Events are the only exceptions granted. -->
 	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<!-- Asks browsers for the front tab's URL when Accessibility doesn't expose it. -->
+	<key>com.apple.security.automation.apple-events</key>
 	<true/>
 </dict>
 </plist>

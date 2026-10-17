@@ -100,6 +100,8 @@ final class DictationController {
     @ObservationIgnored private var speechTracker: SpeechTracker?
     /// Forgets `lastResult` once it expires.
     @ObservationIgnored private var lastResultExpiryTask: Task<Void, Never>?
+    /// Where the current recording's text is going, looked up when the hotkey was pressed.
+    @ObservationIgnored private var targetLookup: Task<DictationTarget?, Never>?
 
     private static let minimumDuration: TimeInterval = 0.2
     private static let handsFreeLimit: Duration = .seconds(10 * 60)
@@ -343,6 +345,8 @@ final class DictationController {
             guard let self, self.status == .recording else { return }
             self.cleaner.prepare()
         }
+        // The cursor is in the target now; a browser's page host can take a moment to read.
+        targetLookup = Task { await DictationTarget.current(askConsent: true) }
         Task {
             do {
                 let chunks = try await recorder.start(deviceID: deviceID, chunkSize: VoiceActivity.chunkSize)
@@ -372,6 +376,8 @@ final class DictationController {
             cleaner.discardPrepared()
             Task { await recorder.cancel() }
         }
+        targetLookup?.cancel()
+        targetLookup = nil
         speechTracker = nil
         hud.hide()
     }
@@ -416,6 +422,8 @@ final class DictationController {
 
         let tracker = speechTracker
         speechTracker = nil
+        let lookup = targetLookup
+        targetLookup = nil
 
         Task {
             defer { status = .idle }
@@ -451,8 +459,10 @@ final class DictationController {
                 var cleanup: TextCleaner.Result?
                 if cleaner.isEnabled {
                     hud.showProcessing("Cleaning…")
+                    let context = await cleanupContext(for: target, lookup: lookup)
                     let started = ContinuousClock.now
-                    let result = await cleaner.clean(trimmed, protected: [dictionary.matcher, snippets.expander.matcher])
+                    let result = await cleaner.clean(
+                        trimmed, protected: [dictionary.matcher, snippets.expander.matcher], context: context)
                     cleanup = result
                     output = result.text
                     fallbackReason = result.fallbackReason
@@ -504,6 +514,20 @@ final class DictationController {
                 hud.flash("Transcription failed")
             }
         }
+    }
+
+    /// How to write the text for `app`, the app it's pasted into. Uses the lookup made when
+    /// the hotkey was pressed, unless the user switched apps while speaking.
+    private func cleanupContext(for app: NSRunningApplication?, lookup: Task<DictationTarget?, Never>?) async -> CleanupContext {
+        guard let app else { return .plain }
+        var detected = await lookup?.value
+        if detected?.processID != app.processIdentifier {
+            detected = await DictationTarget.detect(bundleID: app.bundleIdentifier, processID: app.processIdentifier)
+        }
+        guard let detected else { return .plain }
+        // The app and page host only, never the text.
+        DebugTrace.write("target: \(detected.summary)")
+        return detected.context
     }
 
     // MARK: - Last result

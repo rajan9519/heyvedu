@@ -55,6 +55,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        if CommandLine.arguments.contains(TargetWatch.flag) {
+            Task {
+                await TargetWatch.run()
+                exit(0)
+            }
+            return
+        }
         if CommandLine.arguments.contains(PipelineBenchmark.flag) {
             Task {
                 await PipelineBenchmark.run()
