@@ -284,6 +284,9 @@ private struct ActivityCard: View {
 
     @State private var width: CGFloat = 0
     @State private var year = Calendar.current.component(.year, from: .now)
+    /// The day under the pointer; its tip shows at once, unlike `.help`'s system delay.
+    @State private var hovered: Date?
+    @State private var tipWidth: CGFloat = 0
 
     private let gap: CGFloat = 3
     private let minCell: CGFloat = 10
@@ -357,7 +360,33 @@ private struct ActivityCard: View {
             .foregroundStyle(.secondary)
         }
         .padding(16)
+        .overlayPreferenceValue(HoveredCellKey.self) { anchor in
+            GeometryReader { proxy in
+                if let anchor, let hovered {
+                    let rect = proxy[anchor]
+                    let half = tipWidth / 2
+                    dayTip(hovered)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { tipWidth = $0 }
+                        // Above the cell, kept inside the card at the edges.
+                        .position(x: min(max(rect.midX, half + 4), proxy.size.width - half - 4),
+                                  y: rect.minY - 16)
+                }
+            }
+            .allowsHitTesting(false)
+        }
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator))
+    }
+
+    private func dayTip(_ date: Date) -> some View {
+        let words = stats.day(on: date)?.words ?? 0
+        return Text("\(words == 1 ? "1 word" : "\(words.formatted()) words") on \(date.formatted(.dateTime.weekday(.wide).day().month(.wide).year()))")
+            .font(.caption)
+            .fixedSize()
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.background, in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.separator))
+            .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
     }
 
     /// Fills the available width, within limits; below the minimum the calendar scrolls.
@@ -484,7 +513,10 @@ private struct ActivityCard: View {
             RoundedRectangle(cornerRadius: cell * 0.2)
                 .fill(words == 0 ? AnyShapeStyle(.quaternary) : AnyShapeStyle(Self.levels[level(words, busiest: busiest)]))
                 .frame(width: cell, height: cell)
-                .help("\(words == 1 ? "1 word" : "\(words.formatted()) words") on \(date.formatted(.dateTime.weekday(.wide).day().month(.wide).year()))")
+                .onHover { inside in
+                    if inside { hovered = date } else if hovered == date { hovered = nil }
+                }
+                .anchorPreference(key: HoveredCellKey.self, value: .bounds) { hovered == date ? $0 : nil }
         } else {
             Color.clear.frame(width: cell, height: cell)
         }
@@ -498,6 +530,14 @@ private struct ActivityCard: View {
 
     private func summary(dictations: Int) -> String {
         dictations == 1 ? "1 dictation in" : "\(dictations.formatted()) dictations in"
+    }
+}
+
+/// The bounds of the hovered day cell, for placing its tip over the whole card.
+private struct HoveredCellKey: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
     }
 }
 
