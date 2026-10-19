@@ -154,7 +154,8 @@ final class DictationModelBackend: CleanupBackend {
                 // Progress tasks can land after the download finished; never step back.
                 guard let self, self.loadTask != nil else { return }
                 switch self.state {
-                case .idle: break
+                // A retry after a failed download starts from `.failed`.
+                case .idle, .failed: break
                 case .downloading(let current) where fraction > current: break
                 default: return
                 }
