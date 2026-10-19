@@ -33,15 +33,13 @@ struct MenuContent: View {
 
         Toggle("Clean Up Transcripts", isOn: cleanupEnabled)
         if controller.cleaner.isEnabled {
-            if case .unavailable(let reason) = controller.cleaner.availability {
-                if let progress = controller.cleaner.downloadProgress {
-                    Text(reason)
-                    Text("\(Self.progressBar(progress))  \(Int(progress * 100))%")
-                        .monospacedDigit()
-                    Text("Pasting raw transcripts until the download finishes")
-                } else {
-                    Text("\(reason) — pasting raw transcripts")
+            if let download = controller.modelDownload, download.allowsRawTranscripts {
+                // The download card shows its progress and any failure.
+                if controller.pastesRawWhileDownloading {
+                    Text("Pasting raw transcripts until \(download.name) is ready")
                 }
+            } else if case .unavailable(let reason) = controller.cleaner.availability {
+                Text("\(reason) — pasting raw transcripts")
             }
         }
 
@@ -89,11 +87,5 @@ struct MenuContent: View {
             return "System Default (\(name))"
         }
         return "System Default"
-    }
-
-    /// Menu-style menu bar extras only render text, so the bar is drawn with characters.
-    private static func progressBar(_ progress: Double, width: Int = 20) -> String {
-        let filled = min(width, max(0, Int((progress * Double(width)).rounded(.down))))
-        return String(repeating: "▰", count: filled) + String(repeating: "▱", count: width - filled)
     }
 }

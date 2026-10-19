@@ -70,6 +70,10 @@ final class DictationController {
         get { hotkeyMonitor.isSuspended }
         set { hotkeyMonitor.isSuspended = newValue }
     }
+    /// The person chose to paste raw transcripts until the cleanup model finishes
+    /// downloading. Cleared once it's ready, so a later download asks again.
+    private(set) var pastesRawWhileDownloading = false
+
     /// Dictations pasted this session; the onboarding practice step watches it.
     private(set) var completedDictations = 0
     /// The most recent dictation's text, kept in memory only so it can be pasted again.
@@ -80,6 +84,9 @@ final class DictationController {
     @ObservationIgnored private let recorder = AudioRecorder()
     @ObservationIgnored private let hud = RecordingHUD()
     @ObservationIgnored private let inserter = TextInserter()
+    @ObservationIgnored private lazy var downloadCard = DownloadCard { [weak self] in self?.modelDownload }
+    /// The current press didn't record because dictation waits for a model download.
+    @ObservationIgnored private var pressWaitsForDownload = false
     /// Why the current press could not start recording, shown once the press commits.
     @ObservationIgnored private var pressFailure: String?
     /// Set when the chosen mic was missing and the system default is used instead.
@@ -90,9 +97,6 @@ final class DictationController {
     @ObservationIgnored private var pressActivated = false
     /// The hands-free HUD is counting down to the silence auto-stop.
     @ObservationIgnored private var stoppingSoonShown = false
-    /// The user was told once that dictations paste raw text while the cleanup model
-    /// downloads; later dictations during the same download stay quiet.
-    @ObservationIgnored private var downloadNoticeShown = false
     /// The cleanup model finished downloading mid-dictation; announce it once that's done.
     @ObservationIgnored private var cleanupReadyNoticePending = false
     /// Ends a hands-free recording that runs past `handsFreeLimit`.
@@ -128,6 +132,35 @@ final class DictationController {
             }
             if devices.defaultInputDevice == nil && devices.inputDevices.isEmpty { return "mic.slash" }
             return "mic"
+        }
+    }
+
+    /// A model download dictation waits for: the speech model's, or the cleanup model's
+    /// while cleanup is on. Nil when nothing is downloading or failed to download.
+    var modelDownload: ModelDownload? {
+        if speechModel.isDownloadPending {
+            switch speechModel.state {
+            case .downloading:
+                return ModelDownload(model: .speech, progress: speechModel.downloadProgress ?? 0, size: SpeechModel.downloadSize, failure: nil)
+            case .idle, .loading:
+                return ModelDownload(model: .speech, progress: nil, size: SpeechModel.downloadSize, failure: nil)
+            case .failed(let reason):
+                return ModelDownload(model: .speech, progress: nil, size: SpeechModel.downloadSize, failure: reason)
+            case .ready:
+                break
+            }
+        }
+        guard cleaner.isEnabled, let state = cleaner.modelState else { return nil }
+        let model = ModelDownload.Model.cleanup(cleaner.engine.name)
+        switch state {
+        case .downloading(let fraction):
+            return ModelDownload(model: model, progress: fraction, size: cleaner.downloadSize, failure: nil)
+        case .loading where cleaner.isAwaitingDownload:
+            return ModelDownload(model: model, progress: nil, size: cleaner.downloadSize, failure: nil)
+        case .failed(let reason) where cleaner.needsDownload:
+            return ModelDownload(model: model, progress: nil, size: cleaner.downloadSize, failure: reason)
+        default:
+            return nil
         }
     }
 
@@ -180,8 +213,12 @@ final class DictationController {
             self?.finishRecording()
         }
 
-        speechModel.onReady = { [weak self] in
-            self?.showLaunchHintIfNeeded()
+        downloadCard.onUseRawTranscripts = { [weak self] in self?.pastesRawWhileDownloading = true }
+        downloadCard.onRetry = { [weak self] in self?.retryDownload() }
+        speechModel.onDownloadStarted = { [weak self] in self?.downloadStarted() }
+        cleaner.onDownloadStarted = { [weak self] in self?.downloadStarted() }
+        speechModel.onReady = { [weak self] downloaded in
+            if downloaded { self?.speechModelDownloaded() } else { self?.showLaunchHintIfNeeded() }
             // A small extra download, made once the user has agreed to the speech model's.
             self?.voiceActivity.prepare()
         }
@@ -231,10 +268,35 @@ final class DictationController {
         }
     }
 
+    /// Shows the download card once as a download starts. Not during onboarding, whose
+    /// window shows the downloads, nor over a dictation in progress.
+    private func downloadStarted() {
+        guard Onboarding.isCompleted, status == .idle else { return }
+        downloadCard.show(.started)
+    }
+
+    private func retryDownload() {
+        if case .failed = speechModel.state {
+            speechModel.prepare()
+        } else {
+            cleaner.download()
+        }
+    }
+
+    /// The speech model downloaded this session is ready, so dictation works now.
+    private func speechModelDownloaded() {
+        // Dictation may still wait for the cleanup model; an open card now shows that one.
+        guard modelDownload == nil else { return }
+        downloadCard.hide()
+        guard status == .idle, permissions.allGranted, hotkeyAvailable else { return }
+        hud.flashSuccess("HeyVedu is ready — hold \(hotkey.spokenName) to dictate", for: .seconds(3))
+    }
+
     /// A cleanup model downloaded this session is now in use. Tell the user, without
     /// covering the HUD of a dictation in progress.
     private func cleanupModelReady() {
-        downloadNoticeShown = false
+        pastesRawWhileDownloading = false
+        downloadCard.hide()
         if status == .idle {
             showCleanupReadyNotice()
         } else {
@@ -244,7 +306,7 @@ final class DictationController {
 
     private func showCleanupReadyNotice() {
         cleanupReadyNoticePending = false
-        hud.flash("\(cleaner.engine.name) is ready — transcripts will be cleaned up", for: .seconds(3))
+        hud.flashSuccess("\(cleaner.engine.name) is ready — transcripts will be cleaned up", for: .seconds(3))
     }
 
     // MARK: - Hotkey handling
@@ -257,7 +319,9 @@ final class DictationController {
             pressActivated = true
             if status == .recording {
                 sounds.play(.start)
-                hud.showRecording(notice: pressNotice, listening: audioLive)
+                hud.showRecording(notice: pressNotice, listening: audioLive, tag: rawTag)
+            } else if pressWaitsForDownload {
+                downloadCard.show(.hotkeyPressed)
             } else if let pressFailure {
                 hud.flash(pressFailure)
             }
@@ -268,7 +332,7 @@ final class DictationController {
             if status == .recording {
                 if !alreadyActive { sounds.play(.start) }
                 isHandsFree = true
-                hud.showRecording(notice: pressNotice ?? handsFreeHint, listening: audioLive, handsFree: true)
+                hud.showRecording(notice: pressNotice ?? handsFreeHint, listening: audioLive, handsFree: true, tag: rawTag)
                 handsFreeLimitTask = Task { [weak self] in
                     try? await Task.sleep(for: Self.handsFreeLimit)
                     guard !Task.isCancelled else { return }
@@ -278,13 +342,25 @@ final class DictationController {
             } else {
                 // Busy or unable to record: don't let the next press count as "finish".
                 hotkeyMonitor.reset()
-                hud.flash(pressFailure ?? "Still processing the last dictation")
+                if pressWaitsForDownload {
+                    downloadCard.show(.hotkeyPressed)
+                } else {
+                    hud.flash(pressFailure ?? "Still processing the last dictation")
+                }
             }
         case .released:
             finishRecording()
         case .cancelled:
             cancelRecording()
         }
+    }
+
+    /// Marks a recording whose transcript will be pasted raw because the cleanup model
+    /// is still downloading.
+    private var rawTag: String? {
+        guard pastesRawWhileDownloading, let download = modelDownload, download.allowsRawTranscripts else { return nil }
+        guard download.failure == nil, let progress = download.progress else { return "Raw" }
+        return "Raw · \(Int(progress * 100))%"
     }
 
     private var handsFreeHint: String {
@@ -304,6 +380,7 @@ final class DictationController {
     /// keyboard event tap is never blocked.
     private func beginRecording() {
         pressFailure = nil
+        pressWaitsForDownload = false
         pressNotice = nil
         audioLive = false
         pressActivated = false
@@ -311,6 +388,10 @@ final class DictationController {
 
         guard permissions.microphoneGranted else {
             pressFailure = "Microphone access needed"
+            return
+        }
+        if let download = modelDownload, !(download.allowsRawTranscripts && pastesRawWhileDownloading) {
+            pressWaitsForDownload = true
             return
         }
         switch speechModel.state {
@@ -498,12 +579,8 @@ final class DictationController {
                 if let message = Self.copiedMessage(for: outcome) {
                     // Ahead of the cleanup notices: the user has to act to get their text.
                     hud.flashInfo(message, for: .seconds(4))
-                } else if awaitingDownload {
-                    // Once per download; the menu shows its progress.
-                    if !downloadNoticeShown {
-                        downloadNoticeShown = true
-                        hud.flash("Pasting raw text until \(cleaner.engine.name) finishes downloading", for: .seconds(4))
-                    }
+                } else if awaitingDownload || pastesRawWhileDownloading {
+                    // The person chose raw transcripts; the recording HUD's tag said so.
                 } else if let fallbackReason {
                     // Tell the user the pasted text is the uncleaned transcript, and why.
                     hud.flash("Pasted raw text — \(fallbackReason)", for: .seconds(3))

@@ -20,8 +20,15 @@ final class SpeechModel: Transcriber {
     /// Fraction of the first-launch download completed, while `state == .downloading`.
     private(set) var downloadProgress: Double?
 
-    /// Called once the model is ready (after a download or a load from cache).
-    @ObservationIgnored var onReady: (() -> Void)?
+    /// The model isn't on disk yet: set when its download starts, cleared once it's ready.
+    /// Stays set if the download fails, since trying again downloads it.
+    private(set) var isDownloadPending = false
+
+    /// Called once the model is ready (after a download or a load from cache), with
+    /// whether it was downloaded this session.
+    @ObservationIgnored var onReady: ((_ downloaded: Bool) -> Void)?
+    /// Called when a download starts, including a retry.
+    @ObservationIgnored var onDownloadStarted: (() -> Void)?
 
     @ObservationIgnored private let engine = ParakeetEngine()
     @ObservationIgnored private var prepareTask: Task<Void, Never>?
@@ -48,6 +55,8 @@ final class SpeechModel: Transcriber {
         } else {
             state = .downloading
             downloadProgress = 0
+            isDownloadPending = true
+            onDownloadStarted?()
         }
         prepareTask = Task {
             defer { prepareTask = nil }
@@ -70,9 +79,11 @@ final class SpeechModel: Transcriber {
                         self?.downloadProgress = nil
                     }
                 }
+                let downloaded = isDownloadPending
                 state = .ready
                 downloadProgress = nil
-                onReady?()
+                isDownloadPending = false
+                onReady?(downloaded)
                 DebugTrace.write("model: ready in \(ContinuousClock.now - started)")
             } catch {
                 logger.error("Speech model failed to load: \(error.localizedDescription, privacy: .public)")

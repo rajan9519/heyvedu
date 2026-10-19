@@ -39,6 +39,8 @@ final class HUDModel {
         case message(String)
         /// Not a problem, just something the user should know (e.g. text was copied).
         case info(String)
+        /// Something finished and is ready to use.
+        case success(String)
     }
 
     /// How the indicator is drawn, decided each time it is shown.
@@ -55,6 +57,8 @@ final class HUDModel {
     var phase: Phase = .waitingForAudio
     var layout: Layout = .capsule(atTop: false)
     var notice: String?
+    /// A short label beside the waveform, e.g. that the transcript will be pasted raw.
+    var tag: String?
     /// The notch layout is open. Animated, so the shape grows from and shrinks back into
     /// the notch instead of popping in and out.
     var expanded = false
@@ -96,8 +100,9 @@ final class RecordingHUD {
     private static let closeDuration: Duration = .milliseconds(300)
     private static let fadeDuration: TimeInterval = 0.15
 
-    func showRecording(notice: String?, listening: Bool, handsFree: Bool = false) {
+    func showRecording(notice: String?, listening: Bool, handsFree: Bool = false, tag: String? = nil) {
         model.notice = notice
+        model.tag = tag
         if handsFree, !model.handsFree { model.handsFreeSince = .now }
         model.handsFree = handsFree
         if !handsFree { model.handsFreeSince = nil }
@@ -133,6 +138,10 @@ final class RecordingHUD {
         show(.info(message), for: duration)
     }
 
+    func flashSuccess(_ message: String, for duration: Duration = .seconds(1.5)) {
+        show(.success(message), for: duration)
+    }
+
     private func show(_ phase: HUDModel.Phase, for duration: Duration) {
         resetRecordingState()
         model.phase = phase
@@ -146,6 +155,7 @@ final class RecordingHUD {
 
     private func resetRecordingState() {
         model.notice = nil
+        model.tag = nil
         model.handsFree = false
         model.handsFreeSince = nil
     }
@@ -341,6 +351,15 @@ private struct HUDView: View {
             if model.handsFree, let since = model.handsFreeSince, model.phase == .listening {
                 ElapsedTime(since: since)
             }
+            if let tag = model.tag, model.phase == .waitingForAudio || model.phase == .listening {
+                Text(tag)
+                    .font(.caption.weight(.medium).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(.quaternary, in: Capsule())
+                    .fixedSize()
+            }
         }
     }
 
@@ -356,6 +375,8 @@ private struct HUDView: View {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
         case .info:
             Image(systemName: "doc.on.clipboard").foregroundStyle(.secondary)
+        case .success:
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
         }
     }
 
@@ -363,7 +384,7 @@ private struct HUDView: View {
         switch model.phase {
         case .waitingForAudio, .listening:
             Waveform(levels: model.levels, active: model.phase == .listening)
-        case .processing(let text), .message(let text), .info(let text):
+        case .processing(let text), .message(let text), .info(let text), .success(let text):
             Text(text).font(.callout).lineLimit(1)
         }
     }

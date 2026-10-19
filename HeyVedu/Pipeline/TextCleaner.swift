@@ -105,6 +105,9 @@ final class TextCleaner {
     /// Dictations meanwhile get the raw transcript.
     private(set) var isAwaitingDownload = false
 
+    /// Called when the selected engine's model download starts, including a retry.
+    @ObservationIgnored var onDownloadStarted: (() -> Void)?
+
     /// Called once when a model downloaded in this session has loaded and cleanup starts working.
     @ObservationIgnored var onDownloadedModelReady: (() -> Void)?
 
@@ -185,7 +188,10 @@ final class TextCleaner {
         case .downloading(let fraction):
             let progress = (fraction * 100).rounded(.down) / 100
             if downloadProgress != progress { downloadProgress = progress }
-            isAwaitingDownload = true
+            if !isAwaitingDownload {
+                isAwaitingDownload = true
+                onDownloadStarted?()
+            }
         case .loading:
             downloadProgress = nil
         case .ready:
