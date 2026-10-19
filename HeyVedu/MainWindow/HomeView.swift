@@ -577,7 +577,7 @@ private struct RecentDictations: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .overlay(alignment: .top) { Divider() }
             } else {
-                ForEach(history.entries.prefix(3)) { entry in
+                ForEach(history.entries.prefix(5)) { entry in
                     RecentRow(entry: entry) { copy(entry.finalText) }
                 }
             }
