@@ -29,11 +29,6 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         window.orderFrontRegardless()
     }
 
-    func showSettings() {
-        navigation.section = .settings
-        show()
-    }
-
     func windowWillClose(_ notification: Notification) {
         window = nil
     }
