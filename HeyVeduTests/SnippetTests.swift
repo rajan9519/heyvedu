@@ -68,11 +68,6 @@ struct SnippetExpanderTests {
         #expect(e.expand("sig", dictionary: .empty) == "Rajan")
     }
 
-    @Test func guardDetectsALostTrigger() {
-        let e = expander([calendly])
-        #expect(e.matcher.missingTerm(from: "send my calendly link", in: "Send my Calendly link.") == nil)
-        #expect(e.matcher.missingTerm(from: "send my calendly link", in: "Send my link.") != nil)
-    }
 }
 
 struct SnippetLibraryTests {

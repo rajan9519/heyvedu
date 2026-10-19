@@ -9,9 +9,9 @@ import os
 /// - Vedu Scribe (default): our own Qwen3.5-0.8B fine-tune, on-device with MLX.
 /// - Apple Intelligence: on-device Foundation Model (text never leaves the Mac).
 ///
-/// There is no timeout: slow responses are awaited. Only when an engine cannot produce
-/// usable text (unavailable, refusal, error, or an output that drifts from what was said)
-/// is the raw transcript used, so a dictation is never lost.
+/// There is no timeout: slow responses are awaited. The engine's output is used as is; only
+/// when an engine cannot produce text (unavailable, refusal, error) is the raw transcript
+/// used, so a dictation is never lost.
 @Observable
 final class TextCleaner {
     /// Raw values are persisted; keep them stable.
@@ -75,9 +75,6 @@ final class TextCleaner {
         /// The raw transcript was used because the engine's model is still downloading
         /// (or loading right after its download).
         var awaitingDownload = false
-        /// What the model returned for each chunk, joined, before any guard or polish.
-        /// Nil when no model ran. Kept for opt-in history only, never logged.
-        var modelOutput: String?
     }
 
     /// User toggle; persisted.
@@ -219,12 +216,11 @@ final class TextCleaner {
         backend.discardPrepared()
     }
 
-    /// Phrases `protected` matches in a chunk (dictionary terms, snippet triggers) must
-    /// survive cleanup; a chunk that loses one is pasted raw. `context` says where the text
+    /// `context` says where the text
     /// goes, and `vocabulary` picks each chunk's likely dictionary terms for it; engines that
     /// weren't trained for them ignore both.
     func clean(
-        _ transcript: String, protected: [DictionaryMatcher] = [], context: CleanupContext = .plain,
+        _ transcript: String, context: CleanupContext = .plain,
         vocabulary: VocabularyMatcher = .empty
     ) async -> Result {
         defer { discardPrepared() }
@@ -239,40 +235,22 @@ final class TextCleaner {
         let chunks = await backend.chunks(of: transcript, instructions: instructions)
 
         var outputs: [String] = []
-        var modelOutputs: [String] = []
         var fallbackReason: String?
         for chunk in chunks {
             do {
                 var chunkContext = context
                 chunkContext.vocab = vocabulary.terms(for: chunk)
                 let cleaned = try await backend.clean(chunk, instructions: instructions, context: chunkContext)
-                modelOutputs.append(cleaned)
-                if protected.contains(where: { $0.missingTerm(from: chunk, in: cleaned) != nil }) {
-                    // The reason is logged, so it doesn't name the word.
-                    outputs.append(backend.isNormalizer ? TextPolish.finalize(chunk) : chunk)
-                    fallbackReason = "cleanup changed a dictionary word or snippet"
-                } else if backend.isNormalizer {
-                    // Trained to drop retracted text, apply spoken commands ("new line",
-                    // "bullet point") and return nothing for filler-only speech, which the
-                    // chat-model overlap heuristics would reject.
-                    if !cleaned.isEmpty { outputs.append(cleaned) }
-                } else if let rejection = OutputGuard.rejectionReason(input: chunk, output: cleaned) {
-                    outputs.append(chunk)
-                    fallbackReason = rejection
-                } else {
-                    outputs.append(cleaned)
-                }
+                // Empty is valid: filler-only speech ("um") has no written form.
+                if !cleaned.isEmpty { outputs.append(cleaned) }
             } catch {
                 outputs.append(chunk)
                 fallbackReason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
         }
-        let joined = Self.join(outputs.filter { !$0.isEmpty }, context: context)
-        // Normalizers own casing and punctuation (the fine-tune emits lists, for one).
         return Result(
-            text: backend.isNormalizer ? joined : TextPolish.finalize(joined),
-            fallbackReason: fallbackReason,
-            modelOutput: modelOutputs.isEmpty ? nil : Self.join(modelOutputs, context: context)
+            text: Self.join(outputs.filter { !$0.isEmpty }, context: context),
+            fallbackReason: fallbackReason
         )
     }
 
@@ -350,8 +328,7 @@ final class AppleIntelligenceBackend: CleanupBackend {
         discardPrepared()
     }
 
-    /// `context` is ignored: the general model's prompt isn't tuned for layouts, and the output
-    /// guard would reject an email layout it invented.
+    /// `context` is ignored: the general model's prompt isn't tuned for layouts.
     func clean(_ chunk: String, instructions: String, context: CleanupContext) async throws -> String {
         let session = preparedSession ?? LanguageModelSession(model: model, instructions: instructions)
         preparedSession = nil
@@ -475,24 +452,6 @@ nonisolated enum SentenceChunker {
     }
 }
 
-/// Deterministic touch-ups the small model applies inconsistently: capital first letter,
-/// capital standalone "i", and terminal punctuation.
-nonisolated enum TextPolish {
-    static func finalize(_ text: String) -> String {
-        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let first = result.first else { return result }
-
-        result = result.replacingOccurrences(of: #"\bi\b"#, with: "I", options: .regularExpression)
-        if first.isLowercase {
-            result.replaceSubrange(result.startIndex...result.startIndex, with: String(first).uppercased())
-        }
-        if let last = result.last, last.isLetter || last.isNumber {
-            result.append(".")
-        }
-        return result
-    }
-}
-
 /// Instructions are trusted; the transcript only ever appears in the prompt, delimited.
 nonisolated enum CleanupPrompt {
     static let instructions = """
@@ -545,66 +504,4 @@ nonisolated enum CleanupPrompt {
     static func prompt(for transcript: String) -> String {
         "<transcript>\(transcript)</transcript>"
     }
-}
-
-/// Heuristics that catch the model answering, following, or embellishing the transcript
-/// instead of cleaning it. Rejected output falls back to the raw transcript.
-nonisolated enum OutputGuard {
-    static func rejectionReason(input: String, output: String) -> String? {
-        let inputWords = words(in: input)
-        let outputWords = words(in: output)
-        guard !outputWords.isEmpty else { return "empty output" }
-
-        let known = Set(inputWords)
-        // Digits don't count: number normalization ("twenty three thousand" → "23,450")
-        // legitimately produces digit tokens the transcript never had.
-        let novel = outputWords.filter { !known.contains($0) && !$0.allSatisfy(\.isNumber) }.count
-        if Double(novel) / Double(outputWords.count) > 0.5 {
-            return "output diverges from transcript"
-        }
-        if outputWords.count > inputWords.count + max(4, inputWords.count / 4) {
-            return "output longer than transcript"
-        }
-        if inputWords.count >= 12, Double(outputWords.count) < Double(inputWords.count) * 0.35 {
-            return "output much shorter than transcript"
-        }
-        return nil
-    }
-
-    /// Lowercased word/number tokens with apostrophes dropped, letters and digits split
-    /// ("3pm" → "3", "pm") and small spelled-out numbers mapped to digits.
-    static func words(in text: String) -> [String] {
-        let normalized = text.lowercased().replacingOccurrences(of: "'", with: "").replacingOccurrences(of: "’", with: "")
-        var tokens: [String] = []
-        var current = ""
-        var currentIsDigit = false
-        func flush() {
-            if !current.isEmpty { tokens.append(numberWords[current] ?? current) }
-            current = ""
-        }
-        for character in normalized {
-            if character.isLetter || character.isNumber {
-                let isDigit = character.isNumber
-                if !current.isEmpty && isDigit != currentIsDigit { flush() }
-                current.append(character)
-                currentIsDigit = isDigit
-            } else {
-                flush()
-            }
-        }
-        flush()
-        return tokens
-    }
-
-    private static let numberWords: [String: String] = {
-        let units = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-                     "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
-                     "seventeen", "eighteen", "nineteen", "twenty"]
-        var map = Dictionary(uniqueKeysWithValues: units.enumerated().map { ($1, String($0)) })
-        for (index, tens) in ["thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"].enumerated() {
-            map[tens] = String((index + 3) * 10)
-        }
-        map["percent"] = "%"
-        return map
-    }()
 }

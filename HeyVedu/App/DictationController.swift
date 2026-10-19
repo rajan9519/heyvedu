@@ -84,6 +84,7 @@ final class DictationController {
     @ObservationIgnored private let recorder = AudioRecorder()
     @ObservationIgnored private let hud = RecordingHUD()
     @ObservationIgnored private let inserter = TextInserter()
+    @ObservationIgnored private let editWatcher = EditWatcher()
     @ObservationIgnored private lazy var downloadCard = DownloadCard { [weak self] in self?.modelDownload }
     /// The current press didn't record because dictation waits for a model download.
     @ObservationIgnored private var pressWaitsForDownload = false
@@ -385,6 +386,8 @@ final class DictationController {
         audioLive = false
         pressActivated = false
         guard status == .idle else { return }
+        // The next paste may land in the same field; keep what the last one became.
+        editWatcher.finish()
 
         guard permissions.microphoneGranted else {
             pressFailure = "Microphone access needed"
@@ -544,7 +547,7 @@ final class DictationController {
                     let context = await cleanupContext(for: target, lookup: lookup)
                     let started = ContinuousClock.now
                     let result = await cleaner.clean(
-                        trimmed, protected: [dictionary.matcher, snippets.expander.matcher], context: context,
+                        trimmed, context: context,
                         vocabulary: dictionary.vocabulary)
                     cleanup = result
                     output = result.text
@@ -563,18 +566,23 @@ final class DictationController {
                     return
                 }
                 remember(output)
-                history.record(.init(
+                let entry = DictationHistory.Entry(
                     date: .now,
                     duration: recording.duration,
                     transcript: trimmed,
-                    modelOutput: cleanup?.modelOutput,
-                    cleanedText: cleanup?.text,
+                    modelOutput: cleanup?.text,
                     cleanupEngine: cleanup.map { _ in cleaner.engine.rawValue },
                     fallbackReason: fallbackReason,
                     finalText: output
-                ))
+                )
+                history.record(entry)
                 stats.record(output, duration: recording.duration)
                 let outcome = await inserter.insert(output, into: target)
+                if outcome == .pasted, history.isEnabled {
+                    editWatcher.watch(inserted: output) { [weak self] edited in
+                        self?.history.recordEdit(edited, for: entry.id)
+                    }
+                }
                 completedDictations += 1
                 if let message = Self.copiedMessage(for: outcome) {
                     // Ahead of the cleanup notices: the user has to act to get their text.

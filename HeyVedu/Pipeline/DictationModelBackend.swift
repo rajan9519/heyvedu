@@ -31,7 +31,6 @@ final class DictationModelBackend: CleanupBackend {
 
     private(set) var state: LocalModelState = .idle
 
-    var isNormalizer: Bool { true }
     var modelState: LocalModelState? { state }
     var downloadSize: Int64? { Self.model.totalSize }
 

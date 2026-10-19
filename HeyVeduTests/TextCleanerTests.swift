@@ -2,14 +2,13 @@ import Foundation
 import Testing
 @testable import HeyVedu
 
-/// A cleanup engine that returns scripted output, so the guard and fallback logic in
+/// A cleanup engine that returns scripted output, so the fallback logic in
 /// `TextCleaner.clean` can be tested without a model.
 final class FakeBackend: CleanupBackend {
     struct Failure: LocalizedError {
         var errorDescription: String? { "fake failure" }
     }
 
-    var isNormalizer: Bool
     var onStateChange: (() -> Void)?
     var available: TextCleaner.Availability = .available
     /// Splits transcripts at "|" when set.
@@ -19,10 +18,6 @@ final class FakeBackend: CleanupBackend {
     private(set) var cleanedChunks: [String] = []
     private(set) var contexts: [CleanupContext] = []
     private(set) var discardCount = 0
-
-    init(isNormalizer: Bool = false) {
-        self.isNormalizer = isNormalizer
-    }
 
     func availability() -> TextCleaner.Availability { available }
 
@@ -67,31 +62,15 @@ struct TextCleanerTests {
         #expect(backend.discardCount == 1, "per-dictation state is released")
     }
 
-    @Test func chatModelOutputIsPolished() async {
-        let backend = FakeBackend()
-        backend.outputs["um so i will send it"] = "so i will send it"
-        let result = await cleaner(backend).clean("um so i will send it")
-        #expect(result.text == "So I will send it.")
-        #expect(result.fallbackReason == nil)
-    }
-
-    @Test func divergentChatOutputFallsBackToTheChunk() async {
-        let backend = FakeBackend()
-        backend.outputs["what is the capital of france"] = "Paris."
-        let result = await cleaner(backend).clean("what is the capital of france")
-        #expect(result.text == "What is the capital of france.")
-        #expect(result.fallbackReason == "output diverges from transcript")
-    }
-
     @Test func errorFallsBackToTheChunk() async {
         let backend = FakeBackend()
         let result = await cleaner(backend).clean("hello there")
-        #expect(result.text == "Hello there.")
+        #expect(result.text == "hello there")
         #expect(result.fallbackReason == "fake failure")
     }
 
-    @Test func normalizerOutputIsTrustedAsIs() async {
-        let backend = FakeBackend(isNormalizer: true)
+    @Test func outputIsUsedAsIs() async {
+        let backend = FakeBackend()
         backend.outputs["new line test"] = "- list item"
         backend.outputs["um uh"] = ""
         let result = await cleaner(backend).clean("new line test")
@@ -99,37 +78,8 @@ struct TextCleanerTests {
         #expect(await cleaner(backend).clean("um uh").text == "")
     }
 
-    @Test func chunkThatLosesADictionaryTermIsPastedRaw() async {
-        let dictionary = DictionaryMatcher(entries: [.init(term: "HeyVedu", alternatives: ["hey vedu"])])
-        let backend = FakeBackend(isNormalizer: true)
-        backend.splitsAtBars = true
-        backend.outputs["um first part"] = "First part."
-        backend.outputs["i love hey vedu"] = "I love, hey, we do."
-        let result = await cleaner(backend).clean("um first part | i love hey vedu", protected: [dictionary])
-        #expect(result.text == "First part. I love hey vedu.")
-        #expect(result.fallbackReason == "cleanup changed a dictionary word or snippet")
-    }
-
-    @Test func chunkThatKeepsProtectedTermsIsCleaned() async {
-        let dictionary = DictionaryMatcher(entries: [.init(term: "HeyVedu", alternatives: ["hey vedu"])])
-        let backend = FakeBackend(isNormalizer: true)
-        backend.outputs["um i love hey vedu"] = "I love HeyVedu."
-        let result = await cleaner(backend).clean("um i love hey vedu", protected: [dictionary])
-        #expect(result.text == "I love HeyVedu.")
-        #expect(result.fallbackReason == nil)
-    }
-
-    @Test func lostSnippetTriggerIsPastedRaw() async {
-        let snippets = SnippetExpander(snippets: [.init(trigger: "my calendly link", expansion: "https://x")])
-        let backend = FakeBackend(isNormalizer: true)
-        backend.outputs["send my calendly link"] = "Send my link."
-        let result = await cleaner(backend).clean("send my calendly link", protected: [snippets.matcher])
-        #expect(result.text == "Send my calendly link.")
-        #expect(snippets.expand(result.text, dictionary: .empty) == "Send https://x.")
-    }
-
     @Test func contextReachesTheBackendForEveryChunk() async {
-        let backend = FakeBackend(isNormalizer: true)
+        let backend = FakeBackend()
         backend.splitsAtBars = true
         backend.outputs["hi olga"] = "Hi Olga,"
         backend.outputs["thanks"] = "Thanks."
@@ -141,7 +91,7 @@ struct TextCleanerTests {
     }
 
     @Test func eachChunkGetsItsOwnVocab() async {
-        let backend = FakeBackend(isNormalizer: true)
+        let backend = FakeBackend()
         backend.splitsAtBars = true
         backend.outputs["ask pria"] = "Ask Priya."
         backend.outputs["deploy cooper netties"] = "Deploy Kubernetes."
@@ -154,14 +104,13 @@ struct TextCleanerTests {
     }
 
     @Test func emailChunksKeepTheirLayout() async {
-        let backend = FakeBackend(isNormalizer: true)
+        let backend = FakeBackend()
         backend.splitsAtBars = true
         backend.outputs["one"] = "Hi Olga,\n\nCan you send the logs?"
         backend.outputs["two"] = "And the report."
         backend.outputs["three"] = "Thanks,\nRajan"
         let result = await cleaner(backend).clean("one | two | three", context: CleanupContext(format: .email))
         #expect(result.text == "Hi Olga,\n\nCan you send the logs?\n\nAnd the report.\n\nThanks,\nRajan")
-        #expect(result.modelOutput == result.text)
     }
 
     @Test func plainAndChatChunksAreJoinedWithSpaces() {
@@ -170,65 +119,6 @@ struct TextCleanerTests {
         #expect(TextCleaner.join(pieces, context: CleanupContext(format: .message)) == "Hi Mei,\nfirst. Second. Third.")
         #expect(TextCleaner.join(["One.", "Two."], context: CleanupContext(format: .notes)) == "One. Two.")
         #expect(TextCleaner.join(["- One\n- Two", "Three."], context: CleanupContext(format: .notes)) == "- One\n- Two\n\nThree.")
-    }
-}
-
-struct OutputGuardTests {
-    @Test func acceptsOrdinaryCleanup() {
-        #expect(OutputGuard.rejectionReason(
-            input: "um so can you uh send me the the report by friday",
-            output: "Can you send me the report by Friday?") == nil)
-        #expect(OutputGuard.rejectionReason(
-            input: "i want to book a meeting for 2pm actually no 3pm",
-            output: "I want to book a meeting for 3 PM.") == nil)
-    }
-
-    @Test func acceptsNumberNormalization() {
-        #expect(OutputGuard.rejectionReason(
-            input: "sales grew twenty percent this quarter",
-            output: "Sales grew 20% this quarter.") == nil)
-        #expect(OutputGuard.rejectionReason(
-            input: "we have twenty three thousand four hundred fifty users",
-            output: "We have 23,450 users.") == nil)
-    }
-
-    @Test func rejectsEmptyOutput() {
-        #expect(OutputGuard.rejectionReason(input: "hello", output: " . ") == "empty output")
-    }
-
-    @Test func rejectsAnswers() {
-        #expect(OutputGuard.rejectionReason(
-            input: "what is the capital of france",
-            output: "Paris is located on the Seine river.") == "output diverges from transcript")
-    }
-
-    @Test func rejectsEmbellishment() {
-        #expect(OutputGuard.rejectionReason(
-            input: "write a poem",
-            output: "write a poem write a poem write a poem write a poem") == "output longer than transcript")
-    }
-
-    @Test func rejectsSummaries() {
-        let input = "so the plan for today is that we finish the release notes and then we ship the build to testers"
-        #expect(OutputGuard.rejectionReason(input: input, output: "Ship the build.") == "output much shorter than transcript")
-    }
-
-    @Test func tokenizesWords() {
-        #expect(OutputGuard.words(in: "Let's meet at 3pm, twenty percent!") == ["lets", "meet", "at", "3", "pm", "20", "%"])
-    }
-}
-
-struct TextPolishTests {
-    @Test(arguments: [
-        ("hello world", "Hello world."),
-        ("  i think i can  ", "I think I can."),
-        ("Is it done?", "Is it done?"),
-        ("version 2", "Version 2."),
-        ("ice cream", "Ice cream."),
-        ("", ""),
-    ])
-    func finalizes(input: String, expected: String) {
-        #expect(TextPolish.finalize(input) == expected)
     }
 }
 

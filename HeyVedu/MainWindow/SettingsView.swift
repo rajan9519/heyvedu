@@ -379,7 +379,7 @@ private struct PrivacySettings: View {
             Section {
                 Toggle(isOn: historyBinding) {
                     Text("Keep dictation history")
-                    Text("Saved on this Mac only, so you can find and copy past dictations. Turning this off deletes the history.")
+                    Text("Earlier dictations and your fixes to them, kept on this Mac only and never sent. Turning this off deletes them.")
                 }
                 LabeledContent {
                     Button("Reset…") { confirmingStatsReset = true }

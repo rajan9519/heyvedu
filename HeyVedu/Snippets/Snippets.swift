@@ -67,8 +67,7 @@ final class SnippetLibrary {
 /// become the expansions. So the dictionary can't rewrite text inside an expansion, and an
 /// expansion is never re-capitalized or re-punctuated.
 nonisolated struct SnippetExpander: Sendable {
-    /// Matches triggers. Also the cleanup guard: a chunk whose cleanup loses a trigger is
-    /// pasted raw, so the snippet still expands.
+    /// Matches triggers.
     let matcher: DictionaryMatcher
     private let expansions: [String]
 

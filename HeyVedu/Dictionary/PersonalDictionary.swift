@@ -2,12 +2,8 @@ import Foundation
 import Observation
 import os
 
-/// Words the user wants written a particular way. Applied deterministically, whatever the
-/// cleanup model does:
-/// - after cleanup, every match of a term or one of its alternatives is rewritten to the
-///   term exactly (`DictionaryMatcher.apply`);
-/// - cleanup output that loses a term the transcript had is rejected for that chunk
-///   (`DictionaryMatcher.missingTerm`), so the model can't "correct" a name away.
+/// Words the user wants written a particular way. After cleanup, every match of a term or
+/// one of its alternatives is rewritten to the term exactly (`DictionaryMatcher.apply`).
 ///
 /// Vedu Scribe is also told the few terms that may be in each chunk (`VocabularyMatcher`),
 /// so it can fix mishearings no alternative lists ("cooper netties" → Kubernetes).
@@ -160,21 +156,6 @@ nonisolated struct DictionaryMatcher: Sendable {
         }
         result.append(source.substring(from: cursor))
         return result as String
-    }
-
-    /// A term that `original` contains (as itself or an alternative) but `cleaned` lost,
-    /// or nil when cleanup kept every one.
-    func missingTerm(from original: String, in cleaned: String) -> String? {
-        let before = matchedEntries(in: original)
-        guard !before.isEmpty else { return nil }
-        let after = matchedEntries(in: cleaned)
-        return before.subtracting(after).min().map { terms[$0] }
-    }
-
-    private func matchedEntries(in text: String) -> Set<Int> {
-        guard let regex else { return [] }
-        let range = NSRange(location: 0, length: (text as NSString).length)
-        return Set(regex.matches(in: text, range: range).compactMap(entryIndex(of:)))
     }
 
     private func entryIndex(of match: NSTextCheckingResult) -> Int? {

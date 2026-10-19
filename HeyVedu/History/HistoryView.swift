@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Opt-in dictation history: the main window's History page. Shows only what was pasted
-/// and when, grouped by day; the other pipeline stages stay in the file for feedback
-/// reports. History is turned on and off in Settings › Privacy.
+/// and when, grouped by day; the other pipeline stages and the user's later fixes stay in
+/// the file for feedback reports. History is turned on and off in Settings › Privacy.
 struct HistoryView: View {
     let history: DictationHistory
     let copy: (String) -> Void
@@ -18,7 +18,7 @@ struct HistoryView: View {
                 ContentUnavailableView {
                     Label("History is off", systemImage: "clock.arrow.circlepath")
                 } description: {
-                    Text("Turn it on to find and copy past dictations. They're saved on this Mac only.")
+                    Text("Keep earlier dictations and your fixes to them, on this Mac only.")
                 } actions: {
                     Button("Turn On History") { history.isEnabled = true }
                     Button("Privacy Settings…", action: openPrivacySettings)
@@ -28,7 +28,7 @@ struct HistoryView: View {
                 ContentUnavailableView(
                     "No dictations yet",
                     systemImage: "waveform",
-                    description: Text("Everything you dictate from now on shows up here.")
+                    description: Text("New dictations and your fixes to them show up here.")
                 )
             } else {
                 list
@@ -74,8 +74,12 @@ struct HistoryView: View {
             }
 
             HStack {
-                Text("\(history.entries.count) of up to \(DictationHistory.limit) kept on this Mac")
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(history.entries.count) of up to \(DictationHistory.limit) kept on this Mac")
+                    Text("Never sent. Share it with feedback to improve Vedu Scribe.")
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
                 Spacer()
                 Button("Clear History…") { confirmingClear = true }
             }

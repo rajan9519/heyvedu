@@ -7,11 +7,6 @@ import Foundation
 /// `TextCleaner.Engine` with a title, and return the new backend from `makeBackend()`.
 /// Only `availability()` and `clean(_:instructions:context:)` are required; the rest have defaults.
 protocol CleanupBackend: AnyObject {
-    /// True for models trained only to normalize dictation. Their output is trusted as-is:
-    /// they own casing and punctuation, and may legitimately drop most of a transcript
-    /// (filler-only speech, retractions), which the chat-model output guard would reject.
-    var isNormalizer: Bool { get }
-
     /// For engines that download and load local weights; drives progress in the menu and
     /// the "model ready" notice. Nil for engines without a model lifecycle.
     var modelState: LocalModelState? { get }
@@ -49,7 +44,6 @@ protocol CleanupBackend: AnyObject {
 }
 
 extension CleanupBackend {
-    var isNormalizer: Bool { false }
     var modelState: LocalModelState? { nil }
     var downloadSize: Int64? { nil }
     var isDownloaded: Bool { true }

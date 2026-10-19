@@ -85,7 +85,7 @@ struct DictationStatsTests {
         let defaults = UserDefaults(suiteName: "HeyVeduStatsTests-\(UUID().uuidString)")!
         let entry = DictationHistory.Entry(
             date: date(12), duration: 2, transcript: "um hello there", modelOutput: nil,
-            cleanedText: nil, cleanupEngine: nil, fallbackReason: nil, finalText: "hello there"
+            cleanupEngine: nil, fallbackReason: nil, finalText: "hello there"
         )
         let s = stats()
         s.importOnce([entry, entry], defaults: defaults)

@@ -63,13 +63,6 @@ struct DictionaryMatcherTests {
         #expect(m.apply(to: "I write node js and c++") == "I write Node.js and C++")
     }
 
-    @Test func missingTermReportsATermCleanupLost() {
-        let m = matcher([("HeyVedu", ["hey vedu"]), ("Rajan", [])])
-        #expect(m.missingTerm(from: "hey vedu by rajan", in: "HeyVedu by Rajan.") == nil)
-        #expect(m.missingTerm(from: "hey vedu by rajan", in: "Hey, we do by Rajan.") == "HeyVedu")
-        #expect(m.missingTerm(from: "nothing here", in: "") == nil)
-    }
-
     @Test func normalizedIgnoresCaseAndSurroundingPunctuation() {
         #expect(DictionaryMatcher.normalized("Hey,  Vedu!") == "hey vedu")
         #expect(DictionaryMatcher.normalized(" , ") == "")
