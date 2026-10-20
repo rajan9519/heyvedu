@@ -189,7 +189,6 @@ struct DownloadCardView: View {
         .offset(x: nudgeOffset)
         .onChange(of: model.nudges) { nudge() }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { _ in resized() }
-        .environment(\.colorScheme, .dark)
     }
 
     private func card(_ download: ModelDownload) -> some View {
@@ -236,8 +235,10 @@ struct DownloadCardView: View {
         }
         .padding(16)
         .frame(width: Self.width)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.08)))
+        // Follows the app's appearance: the material takes the window's light or dark look,
+        // so the text must too, or it ends up white on a light card.
+        .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.primary.opacity(0.12)))
         .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
     }
 
@@ -312,7 +313,7 @@ private struct ProgressBar: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.12))
+                Capsule().fill(.primary.opacity(0.12))
                 Capsule()
                     .fill(Color(nsColor: .systemBlue))
                     .frame(width: proxy.size.width * (value ?? 1))
