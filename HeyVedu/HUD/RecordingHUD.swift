@@ -299,7 +299,7 @@ private struct HUDView: View {
                     .capsuleGlass()
                 if let notice = model.notice {
                     Text(notice)
-                        .font(.caption2)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
@@ -317,7 +317,7 @@ private struct HUDView: View {
                 row.frame(height: 32)
                 if let notice = model.notice {
                     Text(notice)
-                        .font(.caption2)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -353,7 +353,7 @@ private struct HUDView: View {
             }
             if let tag = model.tag, model.phase == .waitingForAudio || model.phase == .listening {
                 Text(tag)
-                    .font(.caption.weight(.medium).monospacedDigit())
+                    .font(.subheadline.weight(.medium).monospacedDigit())
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
@@ -385,7 +385,7 @@ private struct HUDView: View {
         case .waitingForAudio, .listening:
             Waveform(levels: model.levels, active: model.phase == .listening)
         case .processing(let text), .message(let text), .info(let text), .success(let text):
-            Text(text).font(.callout).lineLimit(1)
+            Text(text).font(.body).lineLimit(1)
         }
     }
 }
@@ -398,7 +398,7 @@ private struct ElapsedTime: View {
         TimelineView(.periodic(from: since, by: 1)) { context in
             let seconds = max(0, Int(context.date.timeIntervalSince(since)))
             Text(String(format: "%d:%02d", seconds / 60, seconds % 60))
-                .font(.callout.monospacedDigit())
+                .font(.body.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
     }

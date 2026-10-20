@@ -22,7 +22,7 @@ struct HotkeyRecorderView: View {
             Text("Hold the keys you want to use, then let go.")
                 .font(.headline)
             Text("Use modifier keys only: ⌃ ⌥ ⇧ ⌘ or fn. Currently \(current.symbols).")
-                .font(.callout)
+                .font(.body)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
@@ -40,13 +40,12 @@ struct HotkeyRecorderView: View {
                     Label(problem, systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                 } else if captured?.modifiers == .function, Hotkey.systemUsesFunctionKey {
-                    Label("macOS also acts on the 🌐 key. Set Keyboard → “Press 🌐 key to” → Do Nothing.", systemImage: "info.circle")
-                        .foregroundStyle(.secondary)
+                    GlobeKeyWarning(boxed: true)
                 } else {
                     Text(" ")
                 }
             }
-            .font(.callout)
+            .font(.body)
             .fixedSize(horizontal: false, vertical: true)
 
             HStack {

@@ -201,16 +201,16 @@ struct DownloadCardView: View {
                     .frame(width: 30, height: 30)
                     .background(download.failure == nil ? Color.brand : Color.orange, in: RoundedRectangle(cornerRadius: 8))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title(download)).font(.callout.weight(.semibold))
+                    Text(title(download)).font(.body.weight(.semibold))
                     Text(subtitle(download))
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
                 Button(action: close) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .frame(width: 20, height: 20)
                         .background(.quaternary, in: Circle())
                 }
@@ -227,7 +227,7 @@ struct DownloadCardView: View {
                         Spacer()
                         Text(download.progress.map { "\(Int($0 * 100))%" } ?? "")
                     }
-                    .font(.caption.monospacedDigit())
+                    .font(.callout.monospacedDigit())
                     .foregroundStyle(.secondary)
                 }
             }

@@ -33,6 +33,12 @@ struct HomeView: View {
                          : "anywhere and speak")
                 }
                 .foregroundStyle(.secondary)
+                if controller.hotkey.modifiers == .function {
+                    GlobeKeyWarning(boxed: true)
+                        .font(.body)
+                        .frame(maxWidth: 560)
+                        .padding(.top, 6)
+                }
             }
             Spacer(minLength: 16)
             StatusPill(ready: controller.canDictate)
@@ -56,7 +62,7 @@ private struct InlineKeycaps: View {
         HStack(spacing: 3) {
             ForEach(Array(hotkey.keycaps.enumerated()), id: \.offset) { _, key in
                 Text(key.symbol)
-                    .font(.callout.weight(.medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 1)
@@ -81,7 +87,7 @@ private struct StatusPill: View {
             Circle().fill(tint).frame(width: 7, height: 7)
             Text(ready ? "Ready · on-device" : "Setup needed")
         }
-        .font(.callout)
+        .font(.body)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(tint.opacity(0.14), in: Capsule())
@@ -257,7 +263,7 @@ private struct StatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Label(title, systemImage: icon)
-                .font(.callout)
+                .font(.body)
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
@@ -265,7 +271,7 @@ private struct StatTile: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(detail)
-                .font(.caption)
+                .font(.callout)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -316,7 +322,7 @@ private struct ActivityCard: View {
                     Text(summary(dictations: shown.reduce(0) { $0 + $1.dictations }))
                     yearPicker
                 }
-                .font(.callout)
+                .font(.body)
                 .foregroundStyle(.secondary)
             }
             HStack(alignment: .top, spacing: 4) {
@@ -356,7 +362,7 @@ private struct ActivityCard: View {
                 }
                 Text("More")
             }
-            .font(.caption)
+            .font(.callout)
             .foregroundStyle(.secondary)
         }
         .padding(16)
@@ -380,7 +386,7 @@ private struct ActivityCard: View {
     private func dayTip(_ date: Date) -> some View {
         let words = stats.day(on: date)?.words ?? 0
         return Text("\(words == 1 ? "1 word" : "\(words.formatted()) words") on \(date.formatted(.dateTime.weekday(.wide).day().month(.wide).year()))")
-            .font(.caption)
+            .font(.callout)
             .fixedSize()
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -443,7 +449,7 @@ private struct ActivityCard: View {
                     .frame(height: cell)
             }
         }
-        .font(.caption2)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
         .frame(width: weekdayColumn, alignment: .leading)
         .padding(.top, monthRow + 4)
@@ -470,7 +476,7 @@ private struct ActivityCard: View {
                     .offset(x: CGFloat(label.column) * (cell + gap))
             }
         }
-        .font(.caption2)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
         .frame(width: CGFloat(columns.count) * (cell + gap) - gap, height: monthRow, alignment: .topLeading)
     }
@@ -603,7 +609,7 @@ private struct RecentRow: View {
                     .buttonStyle(.borderless)
             }
             Text(entry.date, format: .relative(presentation: .named, unitsStyle: .abbreviated))
-                .font(.caption)
+                .font(.callout)
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 10)

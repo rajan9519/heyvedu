@@ -76,11 +76,11 @@ private struct FooterRow<Icon: View>: View {
                 .frame(width: 18, height: 18)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.callout)
+                    .font(.body)
                     .lineLimit(1)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -118,9 +118,9 @@ private struct ReadyCard: View {
                     .foregroundStyle(Color.brandText)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Update ready")
-                        .font(.callout.weight(.semibold))
+                        .font(.body.weight(.semibold))
                     Text("HeyVedu \(version)")
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -133,7 +133,7 @@ private struct ReadyCard: View {
             .tint(.brand)
             .controlSize(.regular)
             Text("Or it installs the next time you quit.")
-                .font(.caption2)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
         }

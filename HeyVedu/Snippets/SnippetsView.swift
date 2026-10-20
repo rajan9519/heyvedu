@@ -56,7 +56,7 @@ struct SnippetsView: View {
                     .textFieldStyle(.roundedBorder)
                 if !sample.isEmpty {
                     Text(library.expander.expand(sample, dictionary: dictionary))
-                        .font(.callout)
+                        .font(.body)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
@@ -149,7 +149,7 @@ private struct SnippetRow: View {
                 Text("“\(snippet.trigger)”")
                     .fontWeight(.medium)
                 Text(snippet.expansion)
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }

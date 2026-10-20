@@ -40,7 +40,7 @@ struct DictionaryView: View {
                     .textFieldStyle(.roundedBorder)
                 if !sample.isEmpty {
                     Text(dictionary.matcher.apply(to: sample))
-                        .font(.callout)
+                        .font(.body)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
@@ -165,7 +165,7 @@ private struct EntryRow: View {
                 if !entry.alternatives.isEmpty {
                     // Quoted, since an alternative can contain a comma.
                     Text("also heard as " + entry.alternatives.map { "“\($0)”" }.joined(separator: " "))
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -193,7 +193,7 @@ private struct Chip: View {
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
         }
-        .font(.callout)
+        .font(.body)
         .padding(.leading, 8)
         .padding(.trailing, 5)
         .padding(.vertical, 3)

@@ -333,7 +333,7 @@ final class DictationController {
             if status == .recording {
                 if !alreadyActive { sounds.play(.start) }
                 isHandsFree = true
-                hud.showRecording(notice: pressNotice ?? handsFreeHint, listening: audioLive, handsFree: true, tag: rawTag)
+                hud.showRecording(notice: pressNotice ?? globeKeyNotice ?? handsFreeHint, listening: audioLive, handsFree: true, tag: rawTag)
                 handsFreeLimitTask = Task { [weak self] in
                     try? await Task.sleep(for: Self.handsFreeLimit)
                     guard !Task.isCancelled else { return }
@@ -366,7 +366,15 @@ final class DictationController {
 
     /// While holding, reminds the user that a tap would have kept recording without holding.
     private var pushToTalkHint: String? {
-        handsFreeEnabled ? "Release to finish · tap \(hotkey.symbols) for hands-free" : nil
+        handsFreeEnabled ? "Tap \(hotkey.symbols) once for hands-free" : nil
+    }
+
+    /// A tap of fn/🌐 also runs macOS's own 🌐 action (usually the emoji picker), which
+    /// takes the keyboard focus the paste needs. No app can stop that; the user must turn
+    /// it off in Keyboard settings.
+    private var globeKeyNotice: String? {
+        guard hotkey.modifiers == .function, Hotkey.systemUsesFunctionKey else { return nil }
+        return "Emoji picker opened? See HeyVedu Home to fix"
     }
 
     private var handsFreeHint: String {

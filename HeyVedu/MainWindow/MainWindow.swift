@@ -183,7 +183,7 @@ private struct SidebarRow: View {
                 Spacer(minLength: 0)
                 if let shortcut {
                     Text(shortcut)
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.tertiary)
                 }
             }

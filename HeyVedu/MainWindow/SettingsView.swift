@@ -87,7 +87,7 @@ private struct SettingsTabButton: View {
                     .font(.system(size: 17))
                     .frame(height: 20)
                 Text(tab.title)
-                    .font(.caption)
+                    .font(.callout)
             }
             .frame(minWidth: 64)
             .padding(.horizontal, 6)
@@ -124,7 +124,7 @@ private struct GeneralSettings: View {
             Section {
                 Toggle(isOn: $cleaner.isEnabled) {
                     Text("Clean up transcripts")
-                    Text("Removes filler words, applies your self-corrections and fixes punctuation.")
+                    Text("Removes filler words, applies your self-corrections and fixes punctuation.").formNote()
                 }
                 Picker("Cleanup engine", selection: $cleaner.engine) {
                     ForEach(TextCleaner.Engine.supported) { engine in
@@ -162,11 +162,11 @@ private struct GeneralSettings: View {
                     }
                 } label: {
                     Text("Recording indicator")
-                    Text("Notch uses the top of the screen on displays without one.")
+                    Text("Notch uses the top of the screen on displays without one.").formNote()
                 }
                 Toggle(isOn: $sounds.isEnabled) {
                     Text("Play sounds")
-                    Text("A short sound when recording starts, finishes or is cancelled.")
+                    Text("A short sound when recording starts, finishes or is cancelled.").formNote()
                 }
                 Picker(selection: $sounds.theme) {
                     ForEach(SoundCues.Theme.allCases) { theme in
@@ -215,7 +215,7 @@ private struct ToneSettings: View {
                     }
                 } label: {
                     Text(destination.title)
-                    Text(destination.examples)
+                    Text(destination.examples).formNote()
                 }
                 .pickerStyle(.segmented)
                 .fixedSize()
@@ -225,11 +225,11 @@ private struct ToneSettings: View {
             Text("Tone")
         } footer: {
             if applies {
-                Text("Formal fixes grammar and spelling and writes out words like “gonna”, keeping your wording. Casual keeps the way you talk. Email is also laid out with its greeting and sign-off on their own lines.")
+                Text("Formal fixes grammar and spelling and writes out words like “gonna”, keeping your wording. Casual keeps the way you talk. Email is also laid out with its greeting and sign-off on their own lines.").formNote()
             } else if cleaner.isEnabled {
-                Text("Tone works with Vedu Scribe only.")
+                Text("Tone works with Vedu Scribe only.").formNote()
             } else {
-                Text("Turn on cleanup to set a tone.")
+                Text("Turn on cleanup to set a tone.").formNote()
             }
         }
     }
@@ -241,7 +241,7 @@ private struct LaunchAtLoginToggle: View {
     var body: some View {
         Toggle(isOn: Binding(get: { launchAtLogin.isEnabled }, set: { launchAtLogin.setEnabled($0) })) {
             Text("Open at login")
-            Text("Start HeyVedu when you log in, so the shortcut is always ready.")
+            Text("Start HeyVedu when you log in, so the shortcut is always ready.").formNote()
         }
         // The user can change login items in System Settings while HeyVedu runs.
         .onAppear { launchAtLogin.refresh() }
@@ -292,20 +292,20 @@ private struct ShortcutSettings: View {
                             Button("Change…") { setRecording(true) }
                         }
                     }
-                    if controller.hotkey.modifiers == .function, Hotkey.systemUsesFunctionKey {
-                        FunctionKeyWarning()
+                    if controller.hotkey.modifiers == .function {
+                        GlobeKeyWarning()
                     }
                 }
             } footer: {
                 Text(controller.handsFreeEnabled
                      ? "Hold the shortcut to talk and let go to paste, or tap it once to dictate hands-free. Esc cancels."
-                     : "Hold the shortcut to dictate, and let go to paste. Esc cancels.")
+                     : "Hold the shortcut to dictate, and let go to paste. Esc cancels.").formNote()
             }
 
             Section {
                 Toggle(isOn: $controller.handsFreeEnabled) {
                     Text("Tap for hands-free")
-                    Text("Tap the shortcut once to keep recording without holding it, and press it again to finish. Holding it still works as push-to-talk.")
+                    Text("Tap the shortcut once to keep recording without holding it, and press it again to finish. Holding it still works as push-to-talk.").formNote()
                 }
                 Picker(selection: $controller.handsFreeSilenceStop) {
                     ForEach(DictationController.handsFreeSilenceStopChoices, id: \.self) { seconds in
@@ -313,7 +313,7 @@ private struct ShortcutSettings: View {
                     }
                 } label: {
                     Text("Stop when you go quiet")
-                    Text("Finish a hands-free dictation by itself once you've stopped talking.")
+                    Text("Finish a hands-free dictation by itself once you've stopped talking.").formNote()
                 }
                 .disabled(!controller.handsFreeEnabled)
             }
@@ -330,14 +330,52 @@ private struct ShortcutSettings: View {
     }
 }
 
-private struct FunctionKeyWarning: View {
+/// Shown while fn/🌐 is the shortcut and macOS still acts on a 🌐 press. Checks again
+/// whenever HeyVedu comes back to the front, so it goes away once the user fixes it.
+struct GlobeKeyWarning: View {
+    /// Draws its own tinted card, for use outside a Form row.
+    var boxed = false
+    @State private var systemActs = Hotkey.systemUsesFunctionKey
+
     var body: some View {
-        HStack {
-            Label("macOS also acts on the 🌐 key. Set “Press 🌐 key to” to Do Nothing.", systemImage: "info.circle")
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button("Open Keyboard Settings…") { Hotkey.openKeyboardSettings() }
+        Group {
+            if systemActs {
+                HStack(spacing: 10) {
+                    Image(systemName: "globe")
+                        .foregroundStyle(Color.brandText)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("fn also opens the emoji picker")
+                        Text("Keyboard › Press 🌐 key to › Do Nothing")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 12)
+                    Button {
+                        Hotkey.openKeyboardSettings()
+                    } label: {
+                        Label("Open Keyboard Settings", systemImage: "arrow.up.forward.app")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.brand)
+                }
+                .padding(.vertical, boxed ? 8 : 0)
+                .padding(.horizontal, boxed ? 12 : 0)
+                .background {
+                    if boxed { RoundedRectangle(cornerRadius: 8).fill(Color.brand.opacity(0.12)) }
+                }
+            }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            systemActs = Hotkey.systemUsesFunctionKey
+        }
+    }
+}
+
+/// Descriptions under a setting and section footers: a step larger than macOS's own
+/// 10–11 pt so they're easy to read.
+extension Text {
+    func formNote() -> some View {
+        font(.callout).foregroundStyle(.secondary)
     }
 }
 
@@ -393,25 +431,25 @@ private struct PrivacySettings: View {
             } header: {
                 Text("Permissions")
             } footer: {
-                Text("The microphone hears you only while you dictate. Accessibility lets HeyVedu notice \(controller.hotkey.symbols) in any app and paste where your cursor is.")
+                Text("The microphone hears you only while you dictate. Accessibility lets HeyVedu notice \(controller.hotkey.symbols) in any app and paste where your cursor is.").formNote()
             }
 
             Section {
                 Toggle(isOn: historyBinding) {
                     Text("Keep dictation history")
-                    Text("Earlier dictations and your fixes to them, kept on this Mac only and never sent. Turning this off deletes them.")
+                    Text("Earlier dictations and your fixes to them, kept on this Mac only and never sent. Turning this off deletes them.").formNote()
                 }
                 LabeledContent {
                     Button("Reset…") { confirmingStatsReset = true }
                         .disabled(controller.stats.totalDictations == 0)
                 } label: {
                     Text("Activity stats")
-                    Text("Daily word and time counts behind Home. Never the text itself.")
+                    Text("Daily word and time counts behind Home. Never the text itself.").formNote()
                 }
             } header: {
                 Text("Your data")
             } footer: {
-                Text("Your voice is transcribed on this Mac, and nothing leaves it.")
+                Text("Your voice is transcribed on this Mac, and nothing leaves it.").formNote()
             }
         }
         .formStyle(.grouped)

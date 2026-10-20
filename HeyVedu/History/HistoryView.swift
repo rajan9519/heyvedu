@@ -77,13 +77,13 @@ struct HistoryView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(history.entries.count) of up to \(DictationHistory.limit) kept on this Mac")
                     Text("Never sent. Share it with feedback to improve Vedu Scribe.")
-                        .font(.caption)
+                        .font(.callout)
                 }
                 .foregroundStyle(.secondary)
                 Spacer()
                 Button("Clear History…") { confirmingClear = true }
             }
-            .font(.callout)
+            .font(.body)
         }
         .onAppear { searchFocused = true }
     }
@@ -129,7 +129,7 @@ private struct HistoryRow: View {
                 .textSelection(.enabled)
             Spacer(minLength: 12)
             Text(entry.date, format: .dateTime.hour().minute())
-                .font(.caption)
+                .font(.callout)
                 .foregroundStyle(.secondary)
             Button("Copy", systemImage: "doc.on.doc", action: copy)
                 .labelStyle(.iconOnly)

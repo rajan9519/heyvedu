@@ -155,7 +155,7 @@ private struct WelcomeStep: View {
             .padding(.top, 8)
 
             Label("HeyVedu also runs from the menu bar, at the top right of your screen.", systemImage: "menubar.arrow.up.rectangle")
-                .font(.callout)
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .padding(.top, 8)
         }
@@ -208,7 +208,7 @@ struct PermissionRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
                 Text(detail)
-                    .font(.callout)
+                    .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -250,7 +250,7 @@ private struct ModelStep: View {
                 download: downloadCleanup
             )
             Text("You can continue while they download. Turn off Clean Up Transcripts in the menu to skip the cleanup model.")
-                .font(.callout)
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()
@@ -318,7 +318,7 @@ struct ModelRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
                 Text(detail)
-                    .font(.callout)
+                    .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 progress
@@ -337,13 +337,13 @@ struct ModelRow: View {
                 .padding(.top, 6)
             if let size {
                 Text("\(Self.format(Int64(Double(size) * fraction))) of \(Self.format(size))")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
         case .failed(let reason):
             Label(reason, systemImage: "exclamationmark.triangle.fill")
-                .font(.caption)
+                .font(.callout)
                 .foregroundStyle(.orange)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
@@ -359,7 +359,7 @@ struct ModelRow: View {
                 Button("Download", action: download)
                 if let size {
                     Text(Self.format(size))
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -481,7 +481,7 @@ private struct PracticeStep: View {
 
     private func tip(_ icon: String, _ text: String) -> some View {
         Label(text, systemImage: icon)
-            .font(.callout)
+            .font(.body)
             .foregroundStyle(.secondary)
     }
 }
@@ -525,7 +525,7 @@ struct Keycap: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(symbol).font(.system(size: 15, weight: .medium))
-            Text(name).font(.system(size: 11))
+            Text(name).font(.system(size: 12))
         }
         .frame(width: 64, height: 44, alignment: .leading)
         .padding(.horizontal, 8)
