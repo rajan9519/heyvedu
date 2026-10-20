@@ -439,9 +439,11 @@ final class DictationController {
         // Start cleanup preparation on the initial press so model/session setup overlaps
         // the 250 ms commit delay as well as the time the user spends speaking. Defer it
         // off the event-tap callback so launching a CLI cannot make the tap time out.
+        let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier
         Task { [weak self] in
             guard let self, self.status == .recording else { return }
             self.cleaner.prepare()
+            if self.history.isEnabled, let frontmost { EditWatcher.prepare(processID: frontmost) }
         }
         // The cursor is in the target now; a browser's page host can take a moment to read.
         targetLookup = Task { await DictationTarget.current(askConsent: true) }
@@ -592,7 +594,7 @@ final class DictationController {
                 stats.record(output, duration: recording.duration)
                 let outcome = await inserter.insert(output, into: target)
                 if outcome == .pasted, history.isEnabled {
-                    editWatcher.watch(inserted: output) { [weak self] edited in
+                    editWatcher.watch(inserted: output, processID: target?.processIdentifier) { [weak self] edited in
                         self?.history.recordEdit(edited, for: entry.id)
                     }
                 }

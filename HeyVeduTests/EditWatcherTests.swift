@@ -23,6 +23,8 @@ struct EditWatcherTests {
     @Test func emptiedFieldIsNotAnEdit() {
         #expect(EditWatcher.editedSpan(in: "", before: "", after: "") == nil)
         #expect(EditWatcher.editedSpan(in: "Hi  Thanks", before: "Hi ", after: " Thanks") == nil)
+        // Claude's editor after sending a message.
+        #expect(EditWatcher.editedSpan(in: "\n", before: "", after: "") == nil)
     }
 
     @Test func whitespaceOnlyChangesAreNotEdits() {
