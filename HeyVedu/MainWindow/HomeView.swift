@@ -41,7 +41,7 @@ struct HomeView: View {
                 }
             }
             Spacer(minLength: 16)
-            StatusPill(ready: controller.canDictate)
+            ThemeMenu(controller: controller)
         }
     }
 
@@ -78,20 +78,47 @@ private struct InlineKeycaps: View {
     }
 }
 
-private struct StatusPill: View {
-    let ready: Bool
+/// Switches between System, Light and Dark from Home, where it's easy to find; Settings
+/// has the same choice.
+private struct ThemeMenu: View {
+    let controller: DictationController
+
+    @State private var hovering = false
 
     var body: some View {
-        let tint: Color = ready ? .green : .orange
-        HStack(spacing: 6) {
-            Circle().fill(tint).frame(width: 7, height: 7)
-            Text(ready ? "Ready · on-device" : "Setup needed")
+        Menu {
+            ForEach(AppTheme.allCases) { theme in
+                Toggle(isOn: Binding(
+                    get: { controller.theme == theme },
+                    set: { if $0 { controller.theme = theme } }
+                )) {
+                    Label(theme.title, systemImage: theme.icon)
+                }
+            }
+        } label: {
+            Image(systemName: controller.theme.icon)
+                .font(.title3)
+                .frame(width: 40, height: 36)
+                .contentShape(Capsule())
         }
-        .font(.body)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(tint.opacity(0.14), in: Capsule())
-        .help(ready ? "Your voice is transcribed on this Mac, and nothing leaves it." : "Finish the steps below to start dictating.")
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        // Darker while the pointer is over it, with a pointing hand, so it reads as clickable.
+        .background(.primary.opacity(hovering ? 0.14 : 0.06), in: Capsule())
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .onHover { inside in
+            guard inside != hovering else { return }
+            hovering = inside
+            if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+        .onDisappear {
+            if hovering { NSCursor.pop() }
+            hovering = false
+        }
+        .help("Appearance: \(controller.theme.title)")
+        .accessibilityLabel("Appearance")
     }
 }
 
