@@ -522,6 +522,9 @@ private struct AboutSettings: View {
                 LabeledContent("Welcome guide") {
                     Button("Show…", action: showWelcomeGuide)
                 }
+                LabeledContent("Support") {
+                    Link("rajan@heyvedu.com", destination: URL(string: "mailto:rajan@heyvedu.com")!)
+                }
             }
         }
         .formStyle(.grouped)
