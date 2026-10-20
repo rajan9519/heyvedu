@@ -43,7 +43,7 @@ struct MenuContent: View {
             }
         }
 
-        Toggle("Double-Tap for Hands-Free", isOn: handsFreeEnabled)
+        Toggle("Tap for Hands-Free", isOn: handsFreeEnabled)
 
         Divider()
 

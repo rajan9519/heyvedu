@@ -14,7 +14,7 @@ connection only for the initial build and model downloads.
 - Dictates into almost any app that accepts pasted text.
 - Starts listening while you hold **Control + Option** and stops when you
   release it. You can pick another shortcut, such as fn or the right ⌘ key.
-- Double-tap the shortcut to dictate hands-free, then press it once more to
+- Tap the shortcut once to dictate hands-free, then press it again to
   finish.
 - Transcribes English speech locally with NVIDIA Parakeet TDT 0.6B v3 through
   FluidAudio and Core ML.
@@ -166,7 +166,7 @@ previous one is being processed.
 
 ### Hands-free dictation
 
-For longer dictation, double-tap the shortcut instead of holding it. The
+For longer dictation, tap the shortcut once instead of holding it. The
 floating indicator shows a lock while HeyVedu keeps listening. Press the
 shortcut once more to finish, or press **Escape** to cancel. You can type while
 it listens; only Escape cancels.
@@ -174,8 +174,9 @@ it listens; only Escape cancels.
 A hands-free recording also finishes by itself once you've been quiet for 10
 seconds, after a short countdown in the indicator. Change that, or turn it off, with **Stop when you go quiet** in the
 window's Shortcut section. Either way it stops after 10 minutes. Turn off
-**Double-Tap for Hands-Free** in the menu, or in the Shortcut section, to
-disable hands-free dictation.
+**Tap for Hands-Free** in the menu, or in the Shortcut section, to
+disable hands-free dictation; a quick tap then does nothing. While you hold the
+shortcut, the indicator reminds you that a tap starts hands-free.
 
 ### Paste the last dictation again
 

@@ -29,7 +29,7 @@ struct HomeView: View {
                     Text("Hold")
                     InlineKeycaps(hotkey: controller.hotkey)
                     Text(controller.handsFreeEnabled
-                         ? "anywhere and speak, or double-tap for hands-free"
+                         ? "to talk, or tap it once for hands-free"
                          : "anywhere and speak")
                 }
                 .foregroundStyle(.secondary)

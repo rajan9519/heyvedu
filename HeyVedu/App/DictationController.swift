@@ -51,7 +51,7 @@ final class DictationController {
         }
     }
 
-    /// Double-tap the hotkey to keep recording without holding it.
+    /// Tap the hotkey once to keep recording without holding it; holding still works as push-to-talk.
     var handsFreeEnabled = UserDefaults.standard.object(forKey: DictationController.handsFreeKey) as? Bool ?? true {
         didSet {
             UserDefaults.standard.set(handsFreeEnabled, forKey: Self.handsFreeKey)
@@ -320,14 +320,14 @@ final class DictationController {
             pressActivated = true
             if status == .recording {
                 sounds.play(.start)
-                hud.showRecording(notice: pressNotice, listening: audioLive, tag: rawTag)
+                hud.showRecording(notice: pressNotice ?? pushToTalkHint, listening: audioLive, tag: rawTag)
             } else if pressWaitsForDownload {
                 downloadCard.show(.hotkeyPressed)
             } else if let pressFailure {
                 hud.flash(pressFailure)
             }
         case .locked:
-            // A double-tap never passes the hold threshold, so this is the first cue.
+            // A tap never passes the hold threshold, so this is the first cue.
             let alreadyActive = pressActivated
             pressActivated = true
             if status == .recording {
@@ -362,6 +362,11 @@ final class DictationController {
         guard pastesRawWhileDownloading, let download = modelDownload, download.allowsRawTranscripts else { return nil }
         guard download.failure == nil, let progress = download.progress else { return "Raw" }
         return "Raw · \(Int(progress * 100))%"
+    }
+
+    /// While holding, reminds the user that a tap would have kept recording without holding.
+    private var pushToTalkHint: String? {
+        handsFreeEnabled ? "Release to finish · tap \(hotkey.symbols) for hands-free" : nil
     }
 
     private var handsFreeHint: String {

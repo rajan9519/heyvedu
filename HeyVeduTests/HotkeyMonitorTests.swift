@@ -3,8 +3,7 @@ import Testing
 @testable import HeyVedu
 
 /// Drives `HotkeyMonitor.handle` with synthetic events and records what it reports.
-/// Timing-dependent steps wait past the monitor's activation delay (250 ms) and
-/// double-tap window (350 ms).
+/// Timing-dependent steps wait past the monitor's activation delay (250 ms).
 @MainActor
 final class MonitorHarness {
     let monitor = HotkeyMonitor()
@@ -45,7 +44,7 @@ struct HotkeyMonitorTests {
     static let letterC: Int64 = 8
     /// Past the activation delay.
     static let hold = 400
-    /// Past the double-tap window.
+    /// Well past the activation delay.
     static let pause = 500
 
     @Test func holdAndReleaseDictates() async throws {
@@ -58,14 +57,6 @@ struct HotkeyMonitorTests {
         #expect(h.events == [.pressed, .activated, .released])
     }
 
-    @Test func singleTapCancelsAfterTheDoubleTapWindow() async throws {
-        let h = MonitorHarness()
-        h.press()
-        h.release()
-        #expect(h.events == [.pressed])
-        try await h.wait(ms: Self.pause)
-        #expect(h.events == [.pressed, .cancelled])
-    }
 
     @Test func quickReleaseWithoutHandsFreeCancelsImmediately() {
         let h = MonitorHarness(handsFree: false)
@@ -74,13 +65,11 @@ struct HotkeyMonitorTests {
         #expect(h.events == [.pressed, .cancelled])
     }
 
-    @Test func doubleTapLocksAndNextPressFinishes() async throws {
+    @Test func tapLocksAndNextPressFinishes() async throws {
         let h = MonitorHarness()
         h.press()
         h.release()
-        h.press()
         #expect(h.events == [.pressed, .locked])
-        h.release()
         try await h.wait(ms: Self.pause)
         #expect(h.events == [.pressed, .locked], "locked recording keeps going without the keys")
         h.press()
@@ -95,7 +84,7 @@ struct HotkeyMonitorTests {
 
     @Test func typingWhileLockedIsAllowedButEscapeCancels() {
         let h = MonitorHarness()
-        h.press(); h.release(); h.press(); h.release()
+        h.press(); h.release()
         #expect(h.events == [.pressed, .locked])
         #expect(h.keyDown(Self.letterC) == false)
         #expect(h.events == [.pressed, .locked])

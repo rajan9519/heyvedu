@@ -168,6 +168,24 @@ private struct GeneralSettings: View {
                     Text("Play sounds")
                     Text("A short sound when recording starts, finishes or is cancelled.")
                 }
+                Picker(selection: $sounds.theme) {
+                    ForEach(SoundCues.Theme.allCases) { theme in
+                        Text(theme.title).tag(theme)
+                    }
+                } label: {
+                    HStack {
+                        Text("Sound")
+                        Button {
+                            sounds.previewAll()
+                        } label: {
+                            Image(systemName: "play.circle")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Play the start, finish and cancel sounds")
+                    }
+                }
+                .onChange(of: sounds.theme) { sounds.preview(.start) }
+                .disabled(!sounds.isEnabled)
             }
         }
         .formStyle(.grouped)
@@ -279,13 +297,15 @@ private struct ShortcutSettings: View {
                     }
                 }
             } footer: {
-                Text("Hold the shortcut to dictate, and let go to paste. Esc cancels.")
+                Text(controller.handsFreeEnabled
+                     ? "Hold the shortcut to talk and let go to paste, or tap it once to dictate hands-free. Esc cancels."
+                     : "Hold the shortcut to dictate, and let go to paste. Esc cancels.")
             }
 
             Section {
                 Toggle(isOn: $controller.handsFreeEnabled) {
-                    Text("Double-tap for hands-free")
-                    Text("Double-tap the shortcut to keep recording without holding it. Press it again to finish.")
+                    Text("Tap for hands-free")
+                    Text("Tap the shortcut once to keep recording without holding it, and press it again to finish. Holding it still works as push-to-talk.")
                 }
                 Picker(selection: $controller.handsFreeSilenceStop) {
                     ForEach(DictationController.handsFreeSilenceStopChoices, id: \.self) { seconds in

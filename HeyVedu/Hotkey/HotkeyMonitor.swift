@@ -11,9 +11,9 @@ import os
 ///                and transcribe.
 /// - `.cancelled` released early, another key/modifier pressed, or Esc: discard.
 ///
-/// With hands-free mode on, a quick tap followed by a second press within
-/// `doubleTapWindow` sends `.locked` instead: recording continues without holding the
-/// keys until the next press of the hotkey (or Esc to cancel).
+/// With hands-free mode on, a quick tap (released before `activationDelay`) sends
+/// `.locked` instead: recording continues without holding the keys until the next press
+/// of the hotkey (or Esc to cancel). Holding still works as push-to-talk.
 final class HotkeyMonitor {
     enum Event {
         case pressed
@@ -50,10 +50,6 @@ final class HotkeyMonitor {
         case arming
         /// Held past the activation delay (push-to-talk).
         case active
-        /// Released quickly; waiting briefly for a second press.
-        case tapped
-        /// Second press of a double-tap is still held.
-        case lockHeld
         /// Hands-free recording; the next press finishes it.
         case locked
         /// Finished on a press; waiting for all of the hotkey's keys to come up before
@@ -62,7 +58,6 @@ final class HotkeyMonitor {
     }
 
     private static let activationDelay: Duration = .milliseconds(250)
-    private static let doubleTapWindow: Duration = .milliseconds(350)
     private static let escapeKeyCode: Int64 = 53
 
     private var tap: CFMachPort?
@@ -143,7 +138,7 @@ final class HotkeyMonitor {
             case .locked:
                 // Typing while hands-free is fine; only Esc cancels.
                 guard isEscape else { return false }
-            case .arming, .active, .tapped, .lockHeld:
+            case .arming, .active:
                 break
             }
             // Key identity is deliberately not logged beyond Esc vs other.
@@ -178,14 +173,13 @@ final class HotkeyMonitor {
         case .arming:
             if held { return }
             if handsFreeEnabled && !hotkey.isPartOfOtherShortcut(in: rawFlags) {
-                // A quick tap: keep the mic warm in case a second press locks recording.
+                // A quick tap: keep recording hands-free; the mic is already warming up.
                 timer?.cancel()
-                phase = .tapped
-                timer = Task { [weak self] in
-                    try? await Task.sleep(for: Self.doubleTapWindow)
-                    guard let self, !Task.isCancelled, self.phase == .tapped else { return }
-                    self.cancel(reason: "single tap")
-                }
+                timer = nil
+                phase = .locked
+                DebugTrace.write("hotkey: locked")
+                logger.notice("Locked for hands-free recording")
+                onEvent?(.locked)
             } else {
                 cancel(reason: "released or modifier changed before activation")
             }
@@ -201,18 +195,6 @@ final class HotkeyMonitor {
                 phase = .idle
                 onEvent?(.released)
             }
-
-        case .tapped:
-            guard held else { return }
-            timer?.cancel()
-            timer = nil
-            phase = .lockHeld
-            DebugTrace.write("hotkey: locked")
-            logger.notice("Locked for hands-free recording")
-            onEvent?(.locked)
-
-        case .lockHeld:
-            if !held { phase = .locked }
 
         case .locked:
             guard held else { return }
@@ -245,7 +227,7 @@ final class HotkeyMonitor {
         switch phase {
         case .idle, .awaitingRelease:
             return
-        case .arming, .active, .tapped, .lockHeld, .locked:
+        case .arming, .active, .locked:
             DebugTrace.write("hotkey: cancelled (\(reason))")
             logger.notice("Cancelled: \(reason, privacy: .public)")
             phase = hotkeyHeld ? .awaitingRelease : .idle

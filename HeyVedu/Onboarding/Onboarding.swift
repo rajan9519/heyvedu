@@ -429,7 +429,7 @@ private struct PracticeStep: View {
             VStack(alignment: .leading, spacing: 4) {
                 tip("escape", "Press Esc while holding to cancel a dictation.")
                 if controller.handsFreeEnabled {
-                    tip("lock", "Double-tap \(controller.hotkey.symbols) to dictate hands-free, then press it again to finish.")
+                    tip("lock", "Tap \(controller.hotkey.symbols) once to dictate hands-free, then press it again to finish. Hold it for push-to-talk.")
                 }
                 tip("command", "Pressing another key with \(controller.hotkey.symbols) still works as a normal shortcut.")
             }

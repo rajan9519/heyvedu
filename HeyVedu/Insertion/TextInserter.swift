@@ -159,6 +159,11 @@ enum FocusedElement: Equatable {
     private static let messagingTimeout: Float = 0.25
 
     static func current() -> FocusedElement {
+        // Accessibility can't see into our own windows reliably. ⌘V with no text view
+        // focused there makes macOS play its alert sound on top of the stop cue.
+        if NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+            return NSApp.keyWindow?.firstResponder is NSText ? .text : .notText
+        }
         let systemWide = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(systemWide, messagingTimeout)
         var focused: CFTypeRef?
